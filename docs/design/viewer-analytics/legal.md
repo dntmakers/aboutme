@@ -22,8 +22,6 @@ to view use: it decides the purposes (count real views; keep bots off a
 data itself. The resume owner receives only daily totals, which describe no
 person, and cannot change what is processed.
 
-- **AWS** processes on aboutme's behalf as today (Law Article 2(8)): CloudFront
-  and AWS WAF see the request, including the IP address, to label bots.
 - **Google and LinkedIn** verify the viewer in sign in to view, as independent
   controllers, as they do for account sign-in.
 

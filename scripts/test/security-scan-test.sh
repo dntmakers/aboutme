@@ -129,6 +129,7 @@ JSON
     for arch in arm64 amd64; do
       i=$((i + 1))
       printf -v digest '%064d' "$i"
+      [ "$name/$arch" != observer/arm64 ] || continue
       printf 'ghcr.io/%s/aboutme-%s@sha256:%s linux/%s\n' "$owner" "$name" "$digest" "$arch" >>"$WORK/digests.txt"
     done
     if [ "$name" != observer ]; then
@@ -163,6 +164,7 @@ expect_all_targets() {
     for arch in arm64 amd64; do
       i=$((i + 1))
       printf -v digest '%064d' "$i"
+      [ "$name/$arch" != observer/arm64 ] || continue
       ref="ghcr.io/$owner/aboutme-$name@sha256:$digest"
       grep -Fq -- "--platform linux/$arch $ref" "$CALL_LOG" || fail "missing immutable target $name $arch"
       grep -Fq "$ref" "$WORK/reports/summary.txt" || fail "missing summary digest $name $arch"
@@ -175,7 +177,7 @@ expect_all_targets() {
 fixture
 run_scan
 expect_status success
-expect_count 8
+expect_count 7
 expect_all_targets
 grep -Fq 'v9.9.9' "$WORK/reports/summary.txt" || fail 'missing selected release'
 printf 'ok - published release scans eight immutable platform digests\n'
@@ -183,14 +185,14 @@ printf 'ok - published release scans eight immutable platform digests\n'
 fixture
 run_scan v8.8.8
 expect_status success
-expect_count 8
+expect_count 7
 ! grep -q '/latest' "$API_LOG" || fail 'rollback selection queried latest release'
 grep -Fq 'aboutme-server@sha256:a' "$CALL_LOG" || fail 'rollback ignored selected assets'
 
 fixture
 run_scan v9.9.9 v8.8.8
 expect_status success
-expect_count 8
+expect_count 7
 grep -Fq 'aboutme-observer@sha256:a' "$CALL_LOG" || fail 'retained observer assets not used'
 ! grep -Fq 'aboutme-server@sha256:a' "$CALL_LOG" || fail 'observer override changed app selection'
 grep -Fq 'v8.8.8' "$WORK/reports/summary.txt" || fail 'missing observer release'
@@ -203,14 +205,14 @@ printf '# shellcheck shell=bash disable=SC2034\nowner=dntmakers\nname=aboutme\n'
 fixture dntmakers
 SCAN_ROOT=$TREE EXPECT_REPOSITORY=dntmakers/aboutme run_scan
 expect_status success
-expect_count 8
+expect_count 7
 expect_all_targets dntmakers
 ! grep -Fq 'ghcr.io/dannyota/' "$CALL_LOG" || fail 'a dntmakers release scanned a dannyota image'
 fixture dntmakers dannyota
 SCAN_ROOT=$TREE EXPECT_REPOSITORY=dntmakers/aboutme run_scan v9.9.9 v8.8.8
 expect_status success
-expect_count 8
-grep -Fq -- '--platform linux/arm64 ghcr.io/dannyota/aboutme-observer@sha256:a' "$CALL_LOG" ||
+expect_count 7
+grep -Fq -- '--platform linux/amd64 ghcr.io/dannyota/aboutme-observer@sha256:a' "$CALL_LOG" ||
   fail 'a retained dannyota observer was not scanned in its own namespace'
 grep -Fq -- '--platform linux/arm64 ghcr.io/dntmakers/aboutme-server@sha256:0' "$CALL_LOG" ||
   fail 'a dntmakers app release was not scanned in its own namespace'
@@ -240,7 +242,7 @@ for mutation in mixed unknown uppercase extra; do
   run_scan
   expect_status failure
   expect_count 0
-  [ "$(grep -c 'missing or invalid release digest' "$WORK/reports/failed.txt")" -eq 8 ] ||
+  [ "$(grep -c 'missing or invalid release digest' "$WORK/reports/failed.txt")" -eq 7 ] ||
     fail "$mutation namespace did not fail every target"
 done
 fixture
@@ -256,7 +258,7 @@ printf 'ok - a release that mixes or names an unknown owner fails closed\n'
 fixture
 run_scan v7.7.7 v8.8.8
 expect_status failure
-expect_count 2
+expect_count 1
 fixture
 run_scan v9.9.9 v7.7.7
 expect_status failure
@@ -283,34 +285,33 @@ printf 'ok - unpublished releases and missing or invalid assets fail closed\n'
 for mutation in missing duplicate malformed; do
   fixture
   case $mutation in
-  missing) sed '/aboutme-observer@.*linux\/arm64$/d' "$WORK/digests.txt" >"$WORK/changed-digests"; mv "$WORK/changed-digests" "$WORK/digests.txt" ;;
-  duplicate) grep 'aboutme-observer@.*linux/arm64$' "$WORK/digests.txt" >>"$WORK/extra"; cat "$WORK/extra" >>"$WORK/digests.txt" ;;
+  missing) sed '/aboutme-observer@.*linux\/amd64$/d' "$WORK/digests.txt" >"$WORK/changed-digests"; mv "$WORK/changed-digests" "$WORK/digests.txt" ;;
+  duplicate) grep 'aboutme-observer@.*linux/amd64$' "$WORK/digests.txt" >>"$WORK/extra"; cat "$WORK/extra" >>"$WORK/digests.txt" ;;
   malformed) sed 's/aboutme-observer@sha256:/aboutme-observer@invalid:/' "$WORK/digests.txt" >"$WORK/changed-digests"; mv "$WORK/changed-digests" "$WORK/digests.txt" ;;
   esac
   run_scan
   expect_status failure
-  if [ "$mutation" = malformed ]; then expect_count 6; else expect_count 7; fi
+  expect_count 6
   grep -Fq 'observer' "$WORK/reports/failed.txt" || fail 'missing failed digest target'
 done
 printf 'ok - missing, duplicate, and malformed digests preserve other scans\n'
 
 for mode in vulnerability engine engine-clean malformed no-report; do
   fixture
-  export FAIL_TARGET='--platform linux/arm64 ghcr.io/dannyota/aboutme-observer@' FAIL_MODE="$mode"
+  export FAIL_TARGET='--platform linux/amd64 ghcr.io/dannyota/aboutme-observer@' FAIL_MODE="$mode"
   run_scan
   expect_status failure
-  expect_count 8
+  expect_count 7
   grep -Fq 'aboutme-observer@' "$WORK/reports/failed.txt" || fail "missing observer $mode failure"
-  grep -Fq 'released-observer-amd64.json' "$CALL_LOG" || fail 'observer failure stopped next platform'
   if [ "$mode" = engine ] || [ "$mode" = no-report ]; then
-    [ ! -e "$WORK/reports/released-observer-arm64.json" ] || fail 'scan reused a stale report'
+    [ ! -e "$WORK/reports/released-observer-amd64.json" ] || fail 'scan reused a stale report'
   fi
 done
 fixture
 export FAIL_TARGET='--platform linux/arm64 ghcr.io/dannyota/aboutme-server@' FAIL_MODE=engine
 run_scan
 expect_status failure
-expect_count 8
+expect_count 7
 fixture
 run_scan
 expect_status success

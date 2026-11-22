@@ -2,7 +2,7 @@
 
 ## Source map and boundaries
 
-`Caddyfile` owns local one-origin routing. `production/Caddyfile`, `production/Caddyfile.maintenance`, and `production/edges/` own production serving, maintenance, direct Vietnam, and retained CloudFront listener configuration.
+`Caddyfile` owns local one-origin routing. `production/Caddyfile`, `production/Caddyfile.maintenance`, and `production/edges/` own production serving, maintenance, and direct Vietnam listener configuration.
 
 Caddy owns the client-IP trust boundary. Direct production uses the socket address, strips supplied forwarding headers, and sends the canonical address to Go. Read the exact trust rule in [deployment rules](../../instructions/deploy.md). Internal print and public-render transports must not become public routes.
 

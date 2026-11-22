@@ -14,8 +14,6 @@ source "$root/deploy/caddy/production/test/grace_period.sh"
 work=$(mktemp -d)
 name=aboutme-caddy-test
 waf_volume=$name-waf
-port=20452
-closed_port=20451
 trap 'podman rm -f --ignore --depend "$name" "$name-maint" >/dev/null 2>&1 || true; podman volume rm -f "$waf_volume" >/dev/null 2>&1 || true; rm -rf "$work"' EXIT
 podman volume rm -f "$waf_volume" >/dev/null 2>&1 || true
 podman volume create "$waf_volume" >/dev/null
@@ -117,23 +115,7 @@ podman build -q -f "$root/deploy/caddy/production/Dockerfile" -t localhost/about
 user=$(podman image inspect --format '{{.Config.User}}' localhost/aboutme/caddy:test)
 [[ $user == 10001:10001 ]] || { echo "image user is '$user', want 10001:10001" >&2; exit 1; }
 
-ec=(-newkey ec -pkeyopt ec_paramgen_curve:P-256 -nodes)
-openssl req -x509 "${ec[@]}" -days 1 -subj /CN=aboutme.vn \
-  -addext subjectAltName=DNS:aboutme.vn,DNS:www.aboutme.vn \
-  -keyout "$work/origin.key" -out "$work/origin.pem" 2>/dev/null
-openssl req -x509 "${ec[@]}" -days 1 -subj /CN=cloudfront-ca \
-  -keyout "$work/cf-ca.key" -out "$work/cf-ca.pem" 2>/dev/null
-openssl req "${ec[@]}" -subj /CN=cloudfront -keyout "$work/cf.key" -out "$work/cf.csr" 2>/dev/null
-printf '%s\n' extendedKeyUsage=clientAuth >"$work/cf.ext"
-openssl x509 -req -in "$work/cf.csr" -CA "$work/cf-ca.pem" -CAkey "$work/cf-ca.key" \
-  -CAcreateserial -days 1 -extfile "$work/cf.ext" -out "$work/cf.pem" 2>/dev/null
-openssl req -x509 "${ec[@]}" -days 1 -subj /CN=other \
-  -keyout "$work/other.key" -out "$work/other.pem" 2>/dev/null
-
 image=localhost/aboutme/caddy:test
-tls_env=(-e ORIGIN_CERT="$(cat "$work/origin.pem")" -e ORIGIN_KEY="$(cat "$work/origin.key")")
-cf_ca_env=(-e CLOUDFRONT_CLIENT_CA="$(cat "$work/cf-ca.pem")")
-
 # Podman lowers ip_unprivileged_port_start inside a container network namespace; runc gives a tmpfs the image directory's mode (podman-run(1), runc).
 unprivileged=(--sysctl net.ipv4.ip_unprivileged_port_start=1024)
 if runc=$(command -v runc); then
@@ -179,144 +161,11 @@ wait_started() {
   done
 }
 
-start_stack() {
-  podman rm -f --ignore --depend "$name" >/dev/null 2>&1 || true
-  podman run -d --name "$name" -p "127.0.0.1:$port:8443" -p "127.0.0.1:$closed_port:443" \
-    --tmpfs /run/caddy "${unprivileged[@]}" "${tls_env[@]}" "$@" "$image" >/dev/null
-  wait_started "$name"
-  podman run -d --name "$name-echo" --network "container:$name" --entrypoint sh "$image" -c \
-    'printf "{\n\tadmin off\n}\n:8080 {\n\trespond \"ip={http.request.header.X-Real-IP} cfva={http.request.header.CloudFront-Viewer-Address} bot={http.request.header.x-amzn-waf-aboutme-bot} dc={http.request.header.x-amzn-waf-aboutme-dc} other={http.request.header.x-amzn-waf-other}\"\n}\n" >/tmp/echo && exec caddy run --config /tmp/echo --adapter caddyfile' \
-    >/dev/null
-  wait_started "$name-echo"
-}
-
-request() {
-  curl -s -o /dev/null -w '%{http_code}' --resolve "aboutme.vn:$port:127.0.0.1" \
-    --resolve "www.aboutme.vn:$port:127.0.0.1" --cacert "$work/origin.pem" "$@"
-}
-
-cf=(--cert "$work/cf.pem" --key "$work/cf.key")
-
-start_stack "${cf_ca_env[@]}"
-
-if request "https://aboutme.vn:$port/healthz" >/dev/null 2>&1; then
-  echo "request without a client certificate succeeded" >&2
-  exit 1
-fi
-if request --cert "$work/other.pem" --key "$work/other.key" "https://aboutme.vn:$port/healthz" >/dev/null 2>&1; then
-  echo "request with an untrusted client certificate succeeded" >&2
-  exit 1
-fi
-code=$(request "${cf[@]}" "https://aboutme.vn:$port/healthz" || true)
-[[ $code == 200 ]] || { echo "EDGES unset: healthz: want 200 from the stand-in, got $code" >&2; exit 1; }
-if curl -s -m 3 -o /dev/null "http://127.0.0.1:$closed_port/" 2>/dev/null; then
-  echo "container port 443 answered" >&2
-  exit 1
-fi
-if podman exec "$name" sh -c 'tr "\0" "\n" </proc/1/environ | grep -q "^ORIGIN_KEY="'; then
-  echo "ORIGIN_KEY remains in the Caddy process environment" >&2
-  exit 1
-fi
-podman exec "$name" sh -c 'test "$(stat -c %a:%u /run/caddy/origin-key.pem)" = 600:10001'
-check_unprivileged "$name" "1F90 20FB"
-
-start_stack "${cf_ca_env[@]}" -e EDGES=cloudfront
-code=$(request "${cf[@]}" "https://aboutme.vn:$port/healthz" || true)
-[[ $code == 200 ]] || { echo "healthz: want 200, got $code" >&2; exit 1; }
-code=$(request "${cf[@]}" "https://aboutme.vn:$port/print/x" || true)
-[[ $code == 404 ]] || { echo "print: want 404, got $code" >&2; exit 1; }
-curl -s -o /dev/null -D "$work/www.headers" --resolve "www.aboutme.vn:$port:127.0.0.1" \
-  --cacert "$work/origin.pem" "${cf[@]}" "https://www.aboutme.vn:$port/a?b=1"
-grep -q '^HTTP/[0-9.]* 301' "$work/www.headers" || { echo "www: want 301" >&2; exit 1; }
-grep -qi '^location: https://aboutme.vn/a?b=1' "$work/www.headers" ||
-  { echo "www: want a redirect to the apex, same path and query" >&2; exit 1; }
-
-# Caddy reverse_proxy adds "Via: 1.1 Caddy" to proxied responses (Caddy reverse_proxy docs).
-curl -s -o /dev/null -D "$work/resp.headers" --resolve "aboutme.vn:$port:127.0.0.1" \
-  --cacert "$work/origin.pem" "${cf[@]}" "https://aboutme.vn:$port/healthz"
-grep -qi '^strict-transport-security: max-age=31536000'$'\r''$' "$work/resp.headers" ||
-  { echo "want HSTS max-age=31536000" >&2; exit 1; }
-grep -qi '^x-content-type-options: nosniff' "$work/resp.headers" ||
-  { echo "want X-Content-Type-Options nosniff" >&2; exit 1; }
-if grep -qi '^server:' "$work/resp.headers"; then
-  echo "Server header present" >&2
-  exit 1
-fi
-if grep -qi '^via:' "$work/resp.headers"; then
-  echo "Via header present" >&2
-  exit 1
-fi
-
-viewer() {
-  local args=() v
-  for v in "$@"; do args+=(-H "CloudFront-Viewer-Address: $v"); done
-  curl -s --resolve "aboutme.vn:$port:127.0.0.1" --cacert "$work/origin.pem" "${cf[@]}" \
-    -H 'CF-Connecting-IP: 203.0.113.50' -H 'X-Real-IP: 6.6.6.6' -H 'X-Forwarded-For: 5.5.5.5' \
-    -H 'Forwarded: for=4.4.4.4' -H 'X-Forwarded-Host: evil.example' \
-    "${args[@]}" "https://aboutme.vn:$port/api/v1/probe"
-}
-want_viewer() {
-  local want=$1 got
-  shift
-  got=$(viewer "$@")
-  [[ $got == "ip=$want cfva= bot= dc= other=" ]] ||
-    { echo "CloudFront-Viewer-Address '$*': Go received '$got', want 'ip=$want cfva= bot= dc= other='" >&2; exit 1; }
-}
-want_viewer 203.0.113.7 203.0.113.7:46532
-want_viewer 2001:db8:0:0:0:0:0:1 2001:db8:0:0:0:0:0:1:60776
-want_viewer 2001:db8::1 2001:db8::1:443
-want_viewer ''
-want_viewer '' 203.0.113.7:1 198.51.100.9:2
-want_viewer '' '203.0.113.7:1, 198.51.100.9:2'
-want_viewer '' 203.0.113.7
-want_viewer '' '[2001:db8::1]:443'
-want_viewer '' 203.0.113.7:123456
-want_viewer '' 'evil.example:80'
-want_viewer '' '{env.ORIGIN_KEY}:1'
-want_viewer '' ''
-got=$(viewer)
-[[ $got != *203.0.113.50* ]] || { echo "listener trusted CF-Connecting-IP: '$got'" >&2; exit 1; }
-
-waf() {
-  curl -s --resolve "aboutme.vn:$port:127.0.0.1" --cacert "$work/origin.pem" "${cf[@]}" \
-    "$@" "https://aboutme.vn:$port/api/v1/probe"
-}
-got=$(waf -H 'x-amzn-waf-aboutme-bot: 1' -H 'x-amzn-waf-aboutme-dc: 1' -H 'x-amzn-waf-other: 1')
-[[ $got == 'ip= cfva= bot=1 dc=1 other=' ]] ||
-  { echo "waf headers: Go received '$got', want bot=1 dc=1 and no other header" >&2; exit 1; }
-got=$(waf)
-[[ $got == 'ip= cfva= bot= dc= other=' ]] ||
-  { echo "waf headers: no headers sent, Go received '$got', want all empty" >&2; exit 1; }
-got=$(waf -H 'x-amzn-waf-aboutme-dc: 1' -H 'x-amzn-waf-aboutme-dc: 0')
-[[ $got == 'ip= cfva= bot= dc=1 other=' ]] ||
-  { echo "waf headers: repeated dc header, Go received '$got', want dc=1" >&2; exit 1; }
-got=$(waf -H 'x-amzn-waf-aboutme-bot: 0')
-[[ $got == 'ip= cfva= bot=1 dc= other=' ]] ||
-  { echo "waf headers: bot header sent as 0, Go received '$got', want bot=1" >&2; exit 1; }
-
-curl -s -o /dev/null --resolve "aboutme.vn:$port:127.0.0.1" --cacert "$work/origin.pem" "${cf[@]}" \
-  -H 'CloudFront-Viewer-Address: 203.0.113.8:5555' -H 'User-Agent: privacy-probe-agent' \
-  -H 'Referer: https://referrer.example/privacy-probe' "https://aboutme.vn:$port/nested/privacy-probe" || true
-logs=$(podman logs "$name" 2>&1)
-grep -q '"uri":"/nested/privacy-probe"' <<<"$logs" || { echo "no proxy log line for the probe request" >&2; exit 1; }
-grep -q '"method":"GET"' <<<"$logs" || { echo "proxy log lost the method" >&2; exit 1; }
-for leak in client_ip remote_ip remote_port '"headers"' 203.0.113.8 privacy-probe-agent \
-  referrer.example Cf-Connecting-Ip Cloudfront-Viewer-Address; do
-  if grep -qF -- "$leak" <<<"$logs"; then
-    echo "Caddy log contains $leak" >&2
-    exit 1
-  fi
-done
-if grep -i 'enabling HTTP/3 listener' <<<"$logs" >&2; then
-  echo "Caddy enabled HTTP/3" >&2
-  exit 1
-fi
-
 refuse() {
   local label=$1 status
   shift
   set +e
-  timeout 30 podman run --rm --name "$name-refuse" --tmpfs /run/caddy "${tls_env[@]}" "$@" "$image" \
+  timeout 30 podman run --rm --name "$name-refuse" --tmpfs /run/caddy "$@" "$image" \
     >/dev/null 2>"$work/refuse.err"
   status=$?
   set -e
@@ -329,18 +178,15 @@ refuse() {
   grep -qE '^aboutme-caddy: |parameter (not set|null)' "$work/refuse.err" ||
     { echo "entrypoint did not name the problem for $label:" >&2; cat "$work/refuse.err" >&2; exit 1; }
 }
-refuse "an empty EDGES" "${cf_ca_env[@]}" -e EDGES=
-refuse "an unknown edge" "${cf_ca_env[@]}" -e EDGES=cloudfront,bogus
-refuse "a repeated edge" "${cf_ca_env[@]}" -e EDGES=cloudfront,cloudfront
-refuse "a trailing comma" "${cf_ca_env[@]}" -e EDGES=cloudfront,
-refuse "a space" "${cf_ca_env[@]}" -e 'EDGES=cloudfront, cloudfront'
-refuse "an uppercase edge" "${cf_ca_env[@]}" -e EDGES=CloudFront
-refuse "an unknown edge value cloudflare" "${cf_ca_env[@]}" -e EDGES=cloudflare
-refuse "an unknown edge value cloudflare alongside cloudfront" "${cf_ca_env[@]}" -e EDGES=cloudflare,cloudfront
-refuse "cloudfront without its CA" -e EDGES=cloudfront
-
-podman run --rm "$image" adapt || { echo "adapt failed for EDGES unset" >&2; exit 1; }
-podman run --rm -e EDGES=cloudfront "$image" adapt || { echo "adapt failed for EDGES=cloudfront" >&2; exit 1; }
+refuse "an unset EDGES"
+refuse "an empty EDGES" -e EDGES=
+refuse "an unknown edge" -e EDGES=direct,bogus
+refuse "a repeated edge" -e EDGES=direct,direct
+refuse "a trailing comma" -e EDGES=direct,
+refuse "a space" -e 'EDGES=direct, direct'
+refuse "an uppercase edge" -e EDGES=Direct
+refuse "the retired cloudfront edge" -e EDGES=cloudfront
+refuse "an unknown edge value cloudflare" -e EDGES=cloudflare
 
 dport=20453
 hport=20454
@@ -367,7 +213,7 @@ ban_all='{"new":[{"duration":"4h0m0s","id":1,"origin":"cscli","scenario":"test",
 start_direct() {
   local ca
   podman rm -f --ignore --depend "$name" >/dev/null 2>&1 || true
-  podman run -d --name "$name" -p "127.0.0.1:$port:8443" -p "127.0.0.1:$dport:443" -p "127.0.0.1:$hport:80" \
+  podman run -d --name "$name" -p "127.0.0.1:$dport:443" -p "127.0.0.1:$hport:80" \
     --tmpfs /run/caddy "${unprivileged[@]}" --cap-add NET_BIND_SERVICE \
     -v "$waf_volume:/var/log/caddy:U" -v "$work/deployment:/srv/deployment:ro" \
     -e DIRECT_TLS=internal "$@" "$image" >/dev/null
@@ -435,8 +281,16 @@ done
 dcurl -o /dev/null -D "$work/direct.headers" "https://aboutme.vn:$dport/healthz"
 grep -qi '^strict-transport-security: max-age=31536000'$'\r''$' "$work/direct.headers" ||
   { echo "direct: want HSTS max-age=31536000" >&2; exit 1; }
+grep -qi '^x-content-type-options: nosniff' "$work/direct.headers" ||
+  { echo "direct: want X-Content-Type-Options nosniff" >&2; exit 1; }
 if grep -qiE '^(server|via):' "$work/direct.headers"; then
   echo "direct: Server or Via header present" >&2
+  exit 1
+fi
+code=$(dcurl -o /dev/null -w '%{http_code}' "https://aboutme.vn:$dport/print/x")
+[[ $code == 404 ]] || { echo "direct: print: want 404, got $code" >&2; exit 1; }
+if podman logs "$name" 2>&1 | grep -i 'enabling HTTP/3 listener' >&2; then
+  echo "direct: Caddy enabled HTTP/3" >&2
   exit 1
 fi
 
@@ -524,20 +378,10 @@ dcurl -o /dev/null -H 'User-Agent: agentmarker2b4f' -H 'X-Probe: headermarker8f3
   -H 'Content-Type: text/plain' --data 'bodymarker1d6c' \
   "https://aboutme.vn:$dport/api/pathmarker7e2a?token=querymarker4c9d"
 test_crowdsec_bouncer_error_log
-start_direct "${tls_env[@]}" "${cf_ca_env[@]}" -e EDGES=cloudfront,direct -e DIRECT_HOST=vn.aboutme.vn \
+start_direct -e EDGES=direct -e DIRECT_HOST=vn.aboutme.vn \
   -e DIRECT_WWW_HOST= -e CROWDSEC_API_URL=http://127.0.0.1:8090 -e CROWDSEC_API_KEY="$bouncer_key"
 wait_direct 403 vn.aboutme.vn
-check_unprivileged "$name" "0050 01BB 1F90 1F9A 20FB" 0000000000000400
-code=$(request "${cf[@]}" "https://aboutme.vn:$port/healthz" || true)
-[[ $code == 200 ]] || { echo "EDGES=cloudfront,direct: CloudFront healthz: want 200, got $code" >&2; exit 1; }
-got=$(curl -s --resolve "aboutme.vn:$port:127.0.0.1" --cacert "$work/origin.pem" "${cf[@]}" \
-  -H 'CloudFront-Viewer-Address: 203.0.113.7:46532' "https://aboutme.vn:$port/api/v1/probe")
-[[ $got == 'ip=203.0.113.7 '* ]] ||
-  { echo "EDGES=cloudfront,direct: CloudFront client address: Go received '$got'" >&2; exit 1; }
-got=$(curl -s --resolve "aboutme.vn:$port:127.0.0.1" --cacert "$work/origin.pem" "${cf[@]}" \
-  "https://aboutme.vn:$port/.well-known/deployment.json")
-[[ $got != '{"marker":"maintenance"}' ]] ||
-  { echo 'CloudFront listener served the host document' >&2; exit 1; }
+check_unprivileged "$name" "0050 01BB 1F90 1F9A" 0000000000000400
 if podman exec "$name" sh -c 'tr "\0" "\n" </proc/1/environ | grep -q "^CROWDSEC_API_KEY="'; then
   echo "CROWDSEC_API_KEY remains in the Caddy process environment" >&2
   exit 1
@@ -551,54 +395,33 @@ refuse "both CrowdSec key forms" "${direct_refuse[@]}" -e CROWDSEC_API_URL=http:
 refuse "a malformed CrowdSec URL" "${direct_refuse[@]}" -e 'CROWDSEC_API_URL=http://x/ {' -e CROWDSEC_API_KEY=x
 refuse "a remote CrowdSec URL" "${direct_refuse[@]}" \
   -e CROWDSEC_API_URL=http://crowdsec.example.com:8095/ -e CROWDSEC_API_KEY=x
-refuse "CrowdSec without the direct edge" "${cf_ca_env[@]}" -e EDGES=cloudfront \
-  -e CROWDSEC_API_URL=http://127.0.0.1:8090/ -e CROWDSEC_API_KEY=x
 refuse "a malformed DIRECT_HOST" "${direct_refuse[@]}" -e 'DIRECT_HOST=aboutme.vn {'
 refuse "an uppercase DIRECT_HOST" "${direct_refuse[@]}" -e DIRECT_HOST=Aboutme.vn
 refuse "a malformed DIRECT_WWW_HOST" "${direct_refuse[@]}" -e 'DIRECT_WWW_HOST=www.aboutme.vn, evil.example'
 refuse "an unknown DIRECT_TLS" "${direct_refuse[@]}" -e DIRECT_TLS=off
-refuse "both edges on aboutme.vn" "${cf_ca_env[@]}" -e EDGES=cloudfront,direct
-refuse "both edges with the direct www on www.aboutme.vn" "${cf_ca_env[@]}" -e EDGES=cloudfront,direct \
-  -e DIRECT_HOST=vn.aboutme.vn -e DIRECT_WWW_HOST=www.aboutme.vn
 podman run --rm -e EDGES=direct "$image" adapt || { echo "adapt failed for EDGES=direct" >&2; exit 1; }
-podman run --rm -e EDGES=cloudfront,direct -e DIRECT_HOST=vn.aboutme.vn -e DIRECT_WWW_HOST= \
+podman run --rm -e EDGES=direct -e DIRECT_HOST=vn.aboutme.vn -e DIRECT_WWW_HOST= \
   -e CROWDSEC_API_URL=http://127.0.0.1:8090/ -e CROWDSEC_API_KEY=x "$image" adapt ||
-  { echo "adapt failed for EDGES=cloudfront,direct with a rehearsal host and CrowdSec" >&2; exit 1; }
+  { echo "adapt failed for EDGES=direct with a rehearsal host and CrowdSec" >&2; exit 1; }
 
-podman rm -f --ignore --depend "$name" >/dev/null 2>&1 || true
-podman run -d --name "$name" -p "127.0.0.1:$port:8443" --tmpfs /run/caddy \
-  "${unprivileged[@]}" "${tls_env[@]}" "${cf_ca_env[@]}" -e EDGES=cloudfront -e MAINTENANCE=1 \
-  "$image" >/dev/null
-wait_started "$name"
-check_unprivileged "$name" "20FB"
-
-if request "https://aboutme.vn:$port/healthz" >/dev/null 2>&1; then
-  echo "maintenance: request without a client certificate succeeded" >&2
-  exit 1
-fi
-if request --cert "$work/other.pem" --key "$work/other.key" "https://aboutme.vn:$port/healthz" >/dev/null 2>&1; then
-  echo "maintenance: request with an untrusted client certificate succeeded" >&2
-  exit 1
-fi
+start_direct -e EDGES=direct -e MAINTENANCE=1
+wait_direct 503
 
 maint() {
-  local url=$1
-  shift
-  (($#)) || set -- "${cf[@]}"
   curl -s -m 10 -o "$work/maint.body" -D "$work/maint.headers" \
-    --resolve "aboutme.vn:$port:127.0.0.1" --resolve "www.aboutme.vn:$port:127.0.0.1" \
-    --cacert "$work/origin.pem" "$@" "$url"
+    --resolve "aboutme.vn:$dport:127.0.0.1" --resolve "www.aboutme.vn:$dport:127.0.0.1" \
+    --cacert "$work/direct-ca.pem" "$1"
 }
 maint_method() {
   curl -s -m 10 -X "$1" -o "$work/maint.body" -D "$work/maint.headers" \
-    --resolve "aboutme.vn:$port:127.0.0.1" --resolve "www.aboutme.vn:$port:127.0.0.1" \
-    --cacert "$work/origin.pem" "${cf[@]}" "$2"
+    --resolve "aboutme.vn:$dport:127.0.0.1" --resolve "www.aboutme.vn:$dport:127.0.0.1" \
+    --cacert "$work/direct-ca.pem" "$2"
 }
 maint_head() {
   # curl -X HEAD changes only the request line and still waits for a body; --head does not (curl(1)).
   curl -s -m 10 -o /dev/null -D "$work/maint.headers" -w '%{size_download}' --head \
-    --resolve "aboutme.vn:$port:127.0.0.1" --resolve "www.aboutme.vn:$port:127.0.0.1" \
-    --cacert "$work/origin.pem" "${cf[@]}" "$1" >"$work/maint.size"
+    --resolve "aboutme.vn:$dport:127.0.0.1" --resolve "www.aboutme.vn:$dport:127.0.0.1" \
+    --cacert "$work/direct-ca.pem" "$1" >"$work/maint.size"
 }
 check_maint_response() {
   grep -q '^HTTP/[0-9.]* 503' "$work/maint.headers" || { echo "$1: want 503" >&2; exit 1; }
@@ -620,25 +443,25 @@ check_maint_response() {
   fi
 }
 for path in / /readyz /api/v1/anything; do
-  maint "https://aboutme.vn:$port$path"
+  maint "https://aboutme.vn:$dport$path"
   check_maint_response "maintenance $path"
   cmp -s "$work/maint.body" "$maintenance_html" ||
     { echo "maintenance $path: served body does not match maintenance.html byte for byte" >&2; exit 1; }
 done
 
 for method in POST PUT PATCH DELETE OPTIONS; do
-  maint_method "$method" "https://aboutme.vn:$port/api/v1/anything"
+  maint_method "$method" "https://aboutme.vn:$dport/api/v1/anything"
   check_maint_response "maintenance $method"
   cmp -s "$work/maint.body" "$maintenance_html" ||
     { echo "maintenance $method: served body does not match maintenance.html byte for byte" >&2; exit 1; }
 done
 
-maint_head "https://aboutme.vn:$port/"
+maint_head "https://aboutme.vn:$dport/"
 check_maint_response "maintenance HEAD /"
 [[ $(cat "$work/maint.size") == 0 ]] ||
   { echo "maintenance HEAD /: unexpected body ($(cat "$work/maint.size") bytes)" >&2; exit 1; }
 
-maint "https://www.aboutme.vn:$port/some/path"
+maint "https://www.aboutme.vn:$dport/some/path"
 grep -q '^HTTP/[0-9.]* 301' "$work/maint.headers" || { echo "maintenance www: want 301" >&2; exit 1; }
 grep -qi '^location: https://aboutme.vn/some/path' "$work/maint.headers" ||
   { echo "maintenance www: want a permanent redirect to the apex, same path" >&2; exit 1; }

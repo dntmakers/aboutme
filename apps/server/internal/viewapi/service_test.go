@@ -249,41 +249,18 @@ func TestStartAndCollectCountAView(t *testing.T) {
 	}
 }
 
-func TestEdgeLabelsAreReadOnlyFromTheTrustedProxy(t *testing.T) {
+func TestEdgeLabelHeadersDoNotChangeTheOutcome(t *testing.T) {
 	f := newRouteFixture(t)
-	labeled := func(r *http.Request) { r.Header.Set(botLabelHeader, "1") }
+	labeled := func(r *http.Request) {
+		r.Header.Set("X-Amzn-Waf-Aboutme-Bot", "1")
+		r.Header.Set("X-Amzn-Waf-Aboutme-Dc", "1")
+	}
 	body := f.startAndSolve(t, nil)
 	f.now = f.now.Add(9 * time.Second)
 	f.request(http.MethodPost, collectPath, body, labeled)
 
-	direct := func(r *http.Request) {
-		r.RemoteAddr = "198.51.100.7:5000"
-		r.Header.Del("X-Real-IP")
-		r.Header.Set(datacenterLabelHeader, "1")
-	}
-	body = f.startAndSolve(t, direct)
-	f.now = f.now.Add(9 * time.Second)
-	f.request(http.MethodPost, collectPath, body, direct)
-
-	if total := f.totals(t); total.Bot != 1 || total.Datacenter != 0 || total.Counted != 1 {
-		t.Fatalf("totals = %+v, want one bot from the proxy and one counted direct view", total)
-	}
-}
-
-func TestLabelSetNeedsExactlyOneValueOfOne(t *testing.T) {
-	for _, test := range []struct {
-		values []string
-		want   bool
-	}{
-		{nil, false}, {[]string{"1"}, true}, {[]string{"0"}, false}, {[]string{"1", "1"}, false}, {[]string{" 1"}, false},
-	} {
-		header := http.Header{}
-		for _, value := range test.values {
-			header.Add(botLabelHeader, value)
-		}
-		if got := labelSet(header, botLabelHeader); got != test.want {
-			t.Errorf("labelSet(%q) = %v, want %v", test.values, got, test.want)
-		}
+	if total := f.totals(t); total.Bot != 0 || total.Datacenter != 0 || total.Counted != 1 {
+		t.Fatalf("totals = %+v, want one counted view and no bot or datacenter", total)
 	}
 }
 

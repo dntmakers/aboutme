@@ -86,7 +86,6 @@ const golangci = {
 const packageArchives = [
   ["caddy_2.11.9_linux_amd64.tar.gz", "5b8cb7faf8726a2028ad96a66e54e6e81e8f361bc6175e5d22bbd997cc5177fb"],
   ["tofu_1.12.6_linux_amd64.zip", "5dc43da4f750f33873dc25e94587128709e819e544b7be9016b255316153c3a8"],
-  ["providers/registry.opentofu.org/hashicorp/aws/terraform-provider-aws_6.64.0_linux_amd64.zip", "d7e9cc87ada1314e6d8ecc5849385a8f8f45757bd2c145b8657f015c65e5078d"],
   ["providers/registry.opentofu.org/cloudflare/cloudflare/terraform-provider-cloudflare_5.27.0_linux_amd64.zip", "ae47a9f29594d57e634cc0b5b96a18da5a364f43cbd735622ce5fe808728065f"],
   ["providers/registry.opentofu.org/vngcloud/vngcloud/terraform-provider-vngcloud_1.3.21_linux_amd64.zip", "d0f8ae399a3c7a8a6d8d2b569542e977426498270062f8d286a202923ffa8fc1"],
   [golangci.packaged, golangci.digest],
@@ -165,7 +164,7 @@ function checkPackageSteps(list, label) {
 // permission set. No other job or workflow may write packages, request an
 // identity token, or take write-all.
 const publisherPermissions = { actions: "read", contents: "read", packages: "write", "id-token": "write", attestations: "write" };
-const publishers = new Set(["build", "image", "observer-image", "observer-image-amd64"]
+const publishers = new Set(["build", "image", "observer-image-amd64"]
   .map((id) => `.github/workflows/release-images.yml:${id}`));
 const writesPackages = (permissions) => permissions === "write-all" ||
   ["packages", "id-token"].some((scope) => permissions?.[scope] === "write");
@@ -234,7 +233,7 @@ for (const [file, name, mutate] of [
   ["ci", "workflow-level packages write", (doc) => { doc.permissions = { contents: "read", packages: "write" }; }],
   ["security-scan", "scan job identity write", (doc) => { doc.jobs["image-scan"].permissions["id-token"] = "write"; }],
   ["release-images", "publisher without attestations", (doc) => { delete doc.jobs.build.permissions.attestations; }],
-  ["release-images", "publisher with an extra write", (doc) => { doc.jobs["observer-image"].permissions.issues = "write"; }],
+  ["release-images", "publisher with an extra write", (doc) => { doc.jobs["observer-image-amd64"].permissions.issues = "write"; }],
   ["release-images", "publisher with contents write", (doc) => { doc.jobs["observer-image-amd64"].permissions.contents = "write"; }],
   ["release-images", "index job with an extra write", (doc) => { doc.jobs.image.permissions.issues = "write"; }],
 ]) {
@@ -1155,16 +1154,6 @@ for pattern in 'observer*)' '--provenance=false' '--build-arg VERSION=' '--build
     'shared observer build must keep a single-platform manifest and build identity'
 done
 
-OBSERVER_ARM_JOB=$(release_job_body observer-image)
-[ -n "$OBSERVER_ARM_JOB" ] || fail "release-images workflow lacks the arm64 observer job"
-grep -Fxq '    runs-on: ubuntu-24.04-arm' <<<"$OBSERVER_ARM_JOB" ||
-  fail "arm64 observer image does not use the native arm64 runner"
-grep -Fxq "      IMAGE: ghcr.io/\${{ github.repository_owner }}/aboutme-observer:\${{ github.ref_name }}" <<<"$OBSERVER_ARM_JOB" ||
-  fail "arm64 observer image does not keep the plain version tag"
-grep -Fxq '      ARCH: arm64' <<<"$OBSERVER_ARM_JOB" &&
-  grep -Fq 'uses: ./.github/actions/release-image-check' <<<"$OBSERVER_ARM_JOB" ||
-  fail "arm64 observer image is not a single-platform arm64 manifest"
-
 OBSERVER_AMD_JOB=$(release_job_body observer-image-amd64)
 [ -n "$OBSERVER_AMD_JOB" ] || fail "release-images workflow lacks the amd64 observer job"
 grep -Fxq '    runs-on: ubuntu-24.04' <<<"$OBSERVER_AMD_JOB" ||
@@ -1191,30 +1180,23 @@ grep -Fq 'name: sbom-observer-amd64' <<<"$OBSERVER_AMD_JOB" ||
 
 RELEASE_JOB=$(release_job_body release)
 [ -n "$RELEASE_JOB" ] || fail "release-images workflow lacks the release job"
-grep -Fxq '    needs: [image, observer-image, observer-image-amd64]' <<<"$RELEASE_JOB" ||
-  fail "release job must wait on both observer jobs to pick up their digests"
+grep -Fxq '    needs: [image, observer-image-amd64]' <<<"$RELEASE_JOB" ||
+  fail "release job must wait on the observer job to pick up its digest"
 grep -Fxq "    if: \${{ !cancelled() && needs.image.result == 'success' }}" <<<"$RELEASE_JOB" ||
   fail "release job condition lets an observer failure block the app release"
-grep -Fq "OBSERVER_ARM_RESULT: \${{ needs['observer-image'].result }}" <<<"$RELEASE_JOB" ||
-  fail "release job does not read the arm64 observer result"
 grep -Fq "OBSERVER_AMD_RESULT: \${{ needs['observer-image-amd64'].result }}" <<<"$RELEASE_JOB" ||
   fail "release job does not read the amd64 observer result"
-grep -Fq '[ "$OBSERVER_ARM_RESULT" = success ] &&' <<<"$RELEASE_JOB" ||
-  fail "release job does not require a successful arm64 observer job"
-grep -Fq '[ -e artifacts/digest-observer.txt ] &&' <<<"$RELEASE_JOB" ||
-  fail "release job does not require the arm64 observer digest"
-grep -Fq '[ -e artifacts/aboutme-observer.spdx.json ]' <<<"$RELEASE_JOB" ||
-  fail "release job does not require the arm64 observer SBOM"
 grep -Fq '[ "$OBSERVER_AMD_RESULT" = success ] &&' <<<"$RELEASE_JOB" ||
   fail "release job does not require a successful amd64 observer job"
 grep -Fq '[ -e artifacts/digest-observer-amd64.txt ] &&' <<<"$RELEASE_JOB" ||
   fail "release job does not require the amd64 observer digest"
 grep -Fq '[ -e artifacts/aboutme-observer-amd64.spdx.json ]' <<<"$RELEASE_JOB" ||
   fail "release job does not require the amd64 observer SBOM"
-grep -Fq 'echo "ghcr.io/$OWNER/aboutme-observer@$d linux/$arch" >>release/digests.txt' <<<"$RELEASE_JOB" ||
-  fail "release job does not list each observer platform digest"
-grep -Fq 'cp "artifacts/aboutme-$name-arm64.spdx.json" "release/aboutme-$name.spdx.json"' <<<"$RELEASE_JOB" ||
-  fail "release job does not publish the legacy app SBOM name from the AWS arm64 image"
+grep -Fq 'echo "ghcr.io/$OWNER/aboutme-observer@$d linux/amd64" >>release/digests.txt' <<<"$RELEASE_JOB" ||
+  fail "release job does not list the observer amd64 digest"
+grep -Fq 'if gh release view "$TAG" >/dev/null 2>&1; then' <<<"$RELEASE_JOB" &&
+  grep -Fq 'gh release upload "$TAG" --clobber' <<<"$RELEASE_JOB" ||
+  fail "release job cannot repair an existing release on rerun"
 
 assert_observer_scan() {
   awk '

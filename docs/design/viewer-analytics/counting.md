@@ -1,8 +1,11 @@
 # Counting real views
 
 A view counts when a real browser shows a live resume for a while and a person
-interacts with it. Seven layers remove automation without fingerprinting. The
-count is a number per resume per day, with no cookie and no stored personal data
+interacts with it. Five layers remove automation without fingerprinting. They
+keep the numbers 1 and 4 to 7 from
+[ADR 0022](../../adr/0022-viewer-privacy-and-counting.md#counting-layers);
+layers 2 and 3 were AWS edge labels that direct delivery never had. The count is
+a number per resume per day, with no cookie and no stored personal data
 ([ADR 0022](../../adr/0022-viewer-privacy-and-counting.md)).
 
 ## Flow
@@ -10,20 +13,17 @@ count is a number per resume per day, with no cookie and no stored personal data
 ```mermaid
 sequenceDiagram
   participant B as Browser (public-resume.mjs)
-  participant E as CloudFront and WAF
   participant C as Caddy
   participant G as Go
-  B->>E: GET /{slug}
-  E->>C: HTML request
+  B->>C: GET /{slug}
   C->>G: HTML request; Go classifies the user agent
   G-->>B: Resume HTML (unchanged, shared by all viewers)
   B->>G: POST /api/v1/public/resumes/{slug}/views/start
   G-->>B: sealed view token and proof-of-work challenge, or the owner flag
   Note over B: solve proof of work in the background;<br/>wait for 8 s visible and one trusted interaction
-  B->>E: POST /api/v1/public/views/collect
-  E->>C: Bot Control and Anonymous IP labels become x-amzn-waf-aboutme-* headers
-  C->>G: collect with edge headers normalized
-  G->>G: verify token, proof, timing, labels, dedupe, owner, anomaly
+  B->>C: POST /api/v1/public/views/collect
+  C->>G: collect
+  G->>G: verify token, proof, timing, dedupe, owner, anomaly
   G-->>B: 204
 ```
 
@@ -38,17 +38,16 @@ the HTML.
 | #   | Layer                  | Rule                                                                                                                                                                                                 | Outcome when it fails                   |
 | --- | ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------- |
 | 1   | Known crawlers         | Go matches the HTML request's user agent against a committed list. Link-preview fetchers become share signals; search engines and other self-declared bots become `crawler`. Neither runs the script | Share signal or `crawler`, never a view |
-| 2   | Edge bot labels        | Bot Control, label only, on the collect path. Any `bot:` category or name label, or the `automated_browser` or `non_browser_user_agent` signal, sets `x-amzn-waf-aboutme-bot: 1`                     | `bot`                                   |
-| 3   | Hosting networks       | Anonymous IP list `HostingProviderIPList`, Bot Control `known_bot_data_center`, or `cloud_service_provider:*` sets `x-amzn-waf-aboutme-dc: 1`                                                        | `datacenter`                            |
 | 4   | Visible time and input | The script sends collect only after 8 s of cumulative visible time (Page Visibility API) and at least one trusted (`isTrusted`) scroll, pointer, touch, or key event                                 | No collect; not counted, not filtered   |
 | 5   | Sealed one-time token  | Issued by start, sealed with AES-GCM, bound to the resume; accepted 8 s to 30 min after issue, once                                                                                                  | `invalid`                               |
 | 6   | Proof of work          | An ALTCHA v2 challenge from start, solved in the page's main thread, verified by Go                                                                                                                  | `invalid`                               |
 | 7   | Dedupe, owner, anomaly | One counted view per network per resume per day; the owner's own views are dropped; views above the hourly cap become anomalies                                                                      | Not counted, or `anomaly`               |
 
 A view that passes every layer is `counted`. The owner sees `counted` as N and
-the sum of `bot`, `datacenter`, `anomaly`, `invalid`, and `crawler` as M. Layer
-4 failures are people who left quickly or never touched the page; they are
-neither counted nor filtered.
+the sum of `bot`, `datacenter`, `anomaly`, `invalid`, and `crawler` as M; `bot`
+and `datacenter` stay in the API and always read 0 on direct delivery. Layer 4
+failures are people who left quickly or never touched the page; they are neither
+counted nor filtered.
 
 ### Layer 1: crawler list
 
@@ -67,47 +66,6 @@ Share signals count preview fetches, deduplicated per platform per resume per 10
 minutes in memory. A fetch is a proxy for a share: platforms cache previews, and
 one share may fetch twice. Anyone can send a platform's user agent, so the
 signal is labelled "link previews", not "shares".
-
-### Layers 2 and 3: edge labels
-
-The web ACL gains, in count mode only, with no block action anywhere:
-
-1. `AWSManagedRulesBotControlRuleSet`, Common level, rule group override Count,
-   scoped down to `POST` requests whose URL-decoded path starts with
-   `/api/v1/public/views/collect`. Go serves only the plain spelling of the
-   path, so an encoded path cannot reach collect without the labels.
-2. `AWSManagedRulesAnonymousIpList`, override Count, with the same scope-down,
-   and each of its rules overridden to Count so the first match does not hide
-   `HostingProviderIPList`.
-3. Two custom rules after them, action Count with custom request headers:
-   - label match on namespace `awswaf:managed:aws:bot-control:bot:` or labels
-     `…:signal:automated_browser` or `…:signal:non_browser_user_agent` inserts
-     `aboutme-bot: 1`;
-   - label match on
-     `awswaf:managed:aws:anonymous-ip-list:HostingProviderIPList`,
-     `…:bot-control:signal:known_bot_data_center`, or namespace
-     `…:bot-control:signal:cloud_service_provider:` inserts `aboutme-dc: 1`.
-
-AWS WAF prefixes inserted headers with `x-amzn-waf-`, overwrites a header of the
-same name, and allows insertion on Count ([headers][waf-headers]). A viewer can
-send these headers itself, but they only ever move a request out of the count,
-so spoofing gains nothing; no guard rule is needed. A verified bot keeps its
-`bot:verified` label, which still counts as `bot` here, since no verified bot is
-a person. Bot Control verifies bots by the request's source IP, which is the
-viewer address at CloudFront ([Bot Control][waf-bot]).
-
-The rules never block, so crawlers keep reaching every page, which
-[link previews](../link-previews.md#crawlers-waf-and-rate-limits) requires.
-Anonymizing VPNs (`AnonymousIPList`) are not filtered: recruiters use corporate
-VPNs. A corporate gateway that exits from a cloud provider is filtered as a
-hosting network, so such a reader shows in M, not N.
-
-The CloudFront listener in Caddy passes `x-amzn-waf-aboutme-bot` and
-`x-amzn-waf-aboutme-dc` to Go as the constant `1` whenever either is present,
-whatever value arrived, and removes every other `x-amzn-waf-*` header. Go reads
-them only from the loopback proxy, as it reads `X-Real-IP`. Any other listener,
-including a future vCDN listener, removes them. Without an edge that sets them,
-layers 2 and 3 are off and the rest still apply.
 
 ### Layer 4: visible time and interaction
 
@@ -229,9 +187,5 @@ carrier NAT in Vietnam, and they may include such sophisticated automation. Only
 the owner sees counts, so inflating them gains little outside the owner's own
 view.
 
-[waf-headers]:
-  https://docs.aws.amazon.com/waf/latest/developerguide/customizing-the-incoming-request.html
-[waf-bot]:
-  https://docs.aws.amazon.com/waf/latest/developerguide/aws-managed-rule-groups-bot.html
 [altcha-go]: https://github.com/altcha-org/altcha-lib-go
 [altcha-js]: https://github.com/altcha-org/altcha-lib

@@ -20,8 +20,8 @@ in the future. Its verification cache stays in memory; no bucket or secret is
 needed. It runs independently of application maintenance with a read-only root
 filesystem and bounded memory. Deploy verifies the native amd64 observer image's
 provenance before use. That image uses the `<tag>-amd64` tag; a release without
-it leaves the installed observer unchanged. Releases still publish an arm64
-image under the plain version tag; nothing deploys it.
+it leaves the installed observer unchanged. Releases publish no other observer
+image.
 
 The bilingual `/verify` page, linked from the landing footer, shows the chain
 from source to running service and gives an independent verification command. It

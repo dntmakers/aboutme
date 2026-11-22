@@ -178,7 +178,7 @@ media-orphan-sweep-dry-run: ## Report orphan candidates without changing media o
 	cd apps/server && go run ./cmd/server media-orphan-sweep --dry-run
 
 .PHONY: caddy-prod-test
-caddy-prod-test: ## Build the production Caddy image and test routing, origin mTLS, and client-IP trust
+caddy-prod-test: ## Build the production Caddy image and test routing, maintenance, WAF, CrowdSec, and client-IP trust
 	bash deploy/caddy/production/test.sh
 
 .PHONY: server-test-realtime-stress

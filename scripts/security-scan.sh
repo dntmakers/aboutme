@@ -226,6 +226,7 @@ weekly_scan() {
       ready=$observer_ready
     fi
     for arch in arm64 amd64; do
+      [ "$name/$arch" != observer/arm64 ] || continue
       report="$report_dir/released-${name}-${arch}.json"
       rm -f "$report"
       if [ "$ready" -ne 1 ] || ! ref=$(release_image_ref "$source/digests.txt" "$name" "$arch"); then

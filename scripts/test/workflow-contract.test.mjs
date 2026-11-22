@@ -576,11 +576,11 @@ test("image scans share one cached vulnerability database per workflow run", () 
     assert.equal(upload.with["if-no-files-found"], "error");
     assert.equal(upload.with["retention-days"], 1);
     assert.equal(upload.with.path, "${{ runner.temp }}/trivy-cache/db");
-    for (const name of workflow === "release-images" ? ["build", "observer-image", "observer-image-amd64"] : [workflow === "release-check" ? "build" : "image-scan"]) {
+    for (const name of workflow === "release-images" ? ["build", "observer-image-amd64"] : [workflow === "release-check" ? "build" : "image-scan"]) {
       assert.ok([config.jobs[name].needs].flat().includes("trivy-db"), `${workflow}/${name}: database dependency`);
     }
   }
-  for (const name of ["build", "observer-image", "observer-image-amd64"]) {
+  for (const name of ["build", "observer-image-amd64"]) {
     const sbom = readWorkflow("release-images").jobs[name].steps.find((step) => step.run?.includes("image --format spdx-json") || step.run?.includes("image --skip-db-update --format spdx-json"));
     assert.ok(sbom?.run.includes('--cache-dir "$RUNNER_TEMP/trivy-cache" image --skip-db-update --format spdx-json'), `${name}: SBOM skips vulnerability database updates`);
   }
@@ -604,9 +604,8 @@ function checkRepositoryContext(manual, release) {
   assert.equal(release.jobs.build.env.IMAGE, `ghcr.io/${owner}/aboutme-\${{ matrix.name }}:\${{ github.ref_name }}-\${{ matrix.arch }}`, "build image namespace");
   assert.equal(release.jobs.image.env.REPO, `ghcr.io/${owner}/aboutme-\${{ matrix.name }}`, "index repository namespace");
   assert.equal(release.jobs.image.env.IMAGE, `ghcr.io/${owner}/aboutme-\${{ matrix.name }}:\${{ github.ref_name }}`, "index image namespace");
-  assert.equal(release.jobs["observer-image"].env.IMAGE, `ghcr.io/${owner}/aboutme-observer:\${{ github.ref_name }}`, "observer image namespace");
   assert.equal(release.jobs["observer-image-amd64"].env.IMAGE, `ghcr.io/${owner}/aboutme-observer:\${{ github.ref_name }}-amd64`, "observer image namespace");
-  for (const [name, job] of [["manual build", manual.jobs.build], ["observer-image", release.jobs["observer-image"]], ["observer-image-amd64", release.jobs["observer-image-amd64"]]]) {
+  for (const [name, job] of [["manual build", manual.jobs.build], ["observer-image-amd64", release.jobs["observer-image-amd64"]]]) {
     assert.equal(job.env.OWNER, owner, `${name}: observer build owner`);
   }
   for (const [name, job] of Object.entries(release.jobs)) {
@@ -661,7 +660,6 @@ test("release images and trusted checkouts follow the repository context", () =>
     ["fixed digest list", (_manual, release) => { const step = release.jobs.release.steps.find((candidate) => candidate.name === "Assemble"); step.run = step.run.replace("ghcr.io/$OWNER/aboutme-observer@", "ghcr.io/dannyota/aboutme-observer@"); }, /shell namespace/],
     ["fixed notes repository", (_manual, release) => { const step = release.jobs.release.steps.find((candidate) => candidate.name === "Assemble"); step.run = step.run.replace("--repo $GH_REPO", "--repo dannyota/aboutme"); }, /verify command/],
     ["manual observer build without owner", (manual) => { delete manual.jobs.build.env.OWNER; }, /observer build owner/],
-    ["arm64 observer build without owner", (_manual, release) => { delete release.jobs["observer-image"].env.OWNER; }, /observer build owner/],
     ["amd64 observer build with a fixed owner", (_manual, release) => { release.jobs["observer-image-amd64"].env.OWNER = "dntmakers"; }, /observer build owner/],
   ];
   for (const [name, mutate, diagnostic] of fixtures) {
@@ -673,7 +671,7 @@ test("release images and trusted checkouts follow the repository context", () =>
 });
 
 test("release contracts reject changed or skipped attestation inputs", () => {
-  for (const name of ["build", "image", "observer-image", "observer-image-amd64"]) {
+  for (const name of ["build", "image", "observer-image-amd64"]) {
     for (const prefix of ["actions/attest-build-provenance@", "actions/attest@"]) {
       if (name === "image" && prefix === "actions/attest@") continue;
       const fixtures = [
@@ -702,7 +700,7 @@ test("release contracts reject changed or skipped attestation inputs", () => {
 });
 
 test("release contracts reject candidate checkout and local action replacement", () => {
-  for (const name of ["build", "observer-image", "observer-image-amd64"]) {
+  for (const name of ["build", "observer-image-amd64"]) {
     const fixtures = [
       ["repository", (checkout) => { checkout.with = { repository: "unreviewed/aboutme" }; }, /candidate repository/],
       ["ref", (checkout) => { checkout.with = { ref: "refs/heads/unreviewed" }; }, /candidate event commit/],
@@ -741,8 +739,8 @@ test("release contracts reject authority, dependency, timeout, and signing drift
     ["different group per attempt", (_manual, release) => { release.concurrency.group += "-${{ github.run_attempt }}"; }, /serialize/],
     ["missing app dependency", (_manual, release) => { delete release.jobs.image.needs; }, /app build gate/],
     ["index ignores build failure", (_manual, release) => { release.jobs.image.if = "always()"; }, /app index success gate/],
-    ["observer gates app builds", (_manual, release) => { release.jobs.build.needs = ["eligibility", "observer-image"]; }, /independent app builds/],
-    ["observer gates indexes", (_manual, release) => { release.jobs.image.needs = ["build", "observer-image"]; }, /app build gate/],
+    ["observer gates app builds", (_manual, release) => { release.jobs.build.needs = ["eligibility", "observer-image-amd64"]; }, /independent app builds/],
+    ["observer gates indexes", (_manual, release) => { release.jobs.image.needs = ["build", "observer-image-amd64"]; }, /app build gate/],
     ["observer gates release", (_manual, release) => { release.jobs.release.if = "success()"; }, /app release gate/],
     ["app failure ignored", (_manual, release) => { release.jobs.build["continue-on-error"] = true; }, /must block/],
     ["push ignores scan failure", (_manual, release) => { release.jobs.build.steps.find((step) => step.id === "push").if = "always()"; }, /push success/],
@@ -951,13 +949,11 @@ test("app release gate accepts observer-only failures and rejects app failures",
   assert.equal(release.if, "${{ !cancelled() && needs.image.result == 'success' }}");
   const expression = release.if.slice(3, -2);
   for (const image of ["success", "failure", "cancelled", "skipped", undefined]) {
-    for (const observer of ["success", "failure", "skipped"]) {
-      for (const observerAmd of ["success", "failure", "skipped"]) {
-        const needs = { image: { result: image }, "observer-image": { result: observer }, "observer-image-amd64": { result: observerAmd } };
-        for (const cancelled of [false, true]) {
-          const accepted = Function("needs", "cancelled", `return ${expression}`)(needs, () => cancelled);
-          assert.equal(accepted, !cancelled && image === "success", `${image}/${observer}/${observerAmd}/${cancelled}`);
-        }
+    for (const observerAmd of ["success", "failure", "skipped"]) {
+      const needs = { image: { result: image }, "observer-image-amd64": { result: observerAmd } };
+      for (const cancelled of [false, true]) {
+        const accepted = Function("needs", "cancelled", `return ${expression}`)(needs, () => cancelled);
+        assert.equal(accepted, !cancelled && image === "success", `${image}/${observerAmd}/${cancelled}`);
       }
     }
   }
@@ -984,7 +980,7 @@ function checkReleaseContracts(manual, release, action) {
   assert.doesNotMatch(JSON.stringify(manual), /secrets\./, "manual secret access");
   assert.deepEqual(release.on, { push: { tags: ["v*"] } }, "publication tag trigger");
   assert.deepEqual(release.concurrency, { group: "release-images-${{ github.ref }}", "cancel-in-progress": false }, "serialize publication for each tag");
-  const timeouts = { "trivy-db": 15, eligibility: 5, build: 40, image: 10, "observer-image": 20, "observer-image-amd64": 20, release: 10 };
+  const timeouts = { "trivy-db": 15, eligibility: 5, build: 40, image: 10, "observer-image-amd64": 20, release: 10 };
   assert.deepEqual(Object.keys(release.jobs).sort(), Object.keys(timeouts).sort());
   for (const [name, minutes] of Object.entries(timeouts)) {
     const job = release.jobs[name];
@@ -994,9 +990,9 @@ function checkReleaseContracts(manual, release, action) {
   assert.deepEqual(release.jobs.build.needs, ["eligibility", "trivy-db"], "independent app builds");
   assert.equal(release.jobs.image.needs, "build", "app build gate");
   assert.equal(release.jobs.image.if, "github.event_name == 'push'", "app index success gate");
-  assert.deepEqual(release.jobs.release.needs, ["image", "observer-image", "observer-image-amd64"]);
+  assert.deepEqual(release.jobs.release.needs, ["image", "observer-image-amd64"]);
   assert.equal(release.jobs.release.if, "${{ !cancelled() && needs.image.result == 'success' }}", "app release gate");
-  for (const name of ["build", "observer-image", "observer-image-amd64"]) {
+  for (const name of ["build", "observer-image-amd64"]) {
     const job = release.jobs[name];
     const check = job.steps.findIndex((step) => step.uses === imageCheck);
     const push = job.steps.findIndex((step) => step.id === "push");
@@ -1013,13 +1009,12 @@ function checkReleaseContracts(manual, release, action) {
     assert.equal(job.steps[push].if, "github.event_name == 'push'", `${name}: push success gate`);
     assert.deepEqual(job.needs, ["eligibility", "trivy-db"], `${name}: eligibility gate`);
   }
-  for (const name of ["build", "image", "observer-image", "observer-image-amd64"]) {
+  for (const name of ["build", "image", "observer-image-amd64"]) {
     const job = release.jobs[name];
     assert.deepEqual(job.permissions, { actions: "read", contents: "read", packages: "write", "id-token": "write", attestations: "write" });
     const subject = name.startsWith("observer-") ? "ghcr.io/${{ github.repository_owner }}/aboutme-observer" : "ghcr.io/${{ github.repository_owner }}/aboutme-${{ matrix.name }}";
     const digest = name === "image" ? "${{ steps.index.outputs.digest }}" : "${{ steps.push.outputs.digest }}";
-    const sbom = name === "build" ? "aboutme-${{ matrix.name }}-${{ matrix.arch }}.spdx.json" :
-      name === "observer-image" ? "aboutme-observer.spdx.json" : "aboutme-observer-amd64.spdx.json";
+    const sbom = name === "build" ? "aboutme-${{ matrix.name }}-${{ matrix.arch }}.spdx.json" : "aboutme-observer-amd64.spdx.json";
     for (const prefix of ["actions/attest-build-provenance@", "actions/attest@"]) {
       if (name === "image" && prefix === "actions/attest@") continue;
       const steps = job.steps.filter((step) => step.uses?.startsWith(prefix));

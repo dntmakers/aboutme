@@ -119,7 +119,6 @@ run. Fix forward with another patch release.
 | `build`, server/web/caddy × arm64/amd64 | `Build <component> <arch>`: all six succeed      |
 | `image`, server/web/caddy               | `Index <component>`: all three succeed           |
 | `release`                               | `Publish release`: success                       |
-| `observer-image`                        | `Build observer arm64`: optional                 |
 | `observer-image-amd64`                  | `Build observer amd64`: required for replacement |
 
 Assign these names before releasing `F`, retaining job IDs. Require exactly one
