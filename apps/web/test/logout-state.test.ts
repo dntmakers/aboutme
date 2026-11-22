@@ -110,7 +110,9 @@ describe('logout state transition', () => {
     expect(wrapper.find('[href="/login"]').exists()).toBe(false);
     expect(wrapper.find('[href="/register"]').exists()).toBe(false);
     expect(meReads).toBe(readsBeforeLogout);
-    expect(vi.mocked(navigateTo)).toHaveBeenCalledWith('/login');
+    expect(vi.mocked(navigateTo)).toHaveBeenCalledWith('/login', {
+      external: true,
+    });
 
     clearNuxtState(localeCookie);
     const reloaded = await mountSuspended(LocaleToggle, {

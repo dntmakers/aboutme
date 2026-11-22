@@ -19,7 +19,7 @@ const PENDING_KEY = 'aboutme.pendingReturnPath';
 describe('verify-email.vue (fragment handling)', () => {
   it('composes the auth page and shared error banner', async () => {
     window.location.hash = '';
-    const wrapper = await mountSuspended(VerifyEmailPage);
+    const wrapper = await mountSuspended(VerifyEmailPage, { route: '' });
 
     const main = wrapper.get('[data-testid="verify-email-page"]');
     expect(main.find('[data-slot="card"]').exists()).toBe(false);
@@ -34,15 +34,16 @@ describe('verify-email.vue (fragment handling)', () => {
     );
   });
 
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.mocked(useHead).mockClear();
-    window.location.hash = '';
+    await useRouter().replace('/verify-email');
     window.localStorage.removeItem(PENDING_KEY);
   });
 
   it('verifies a single token, stripping it before the fetch', async () => {
+    await useRouter().replace('/verify-email#token=' + TOKEN);
     window.location.hash = `#token=${TOKEN}`;
-    const replaceSpy = vi.spyOn(history, 'replaceState');
+    const replaceSpy = vi.spyOn(useRouter(), 'replace');
     let hashAtRequest = 'unset';
     let bodyAtRequest: string | null = null;
     let calls = 0;
@@ -57,13 +58,16 @@ describe('verify-email.vue (fragment handling)', () => {
       },
     });
 
-    const wrapper = await mountSuspended(VerifyEmailPage);
+    const wrapper = await mountSuspended(VerifyEmailPage, { route: '' });
     await flushPromises();
 
-    expect(calls).toBe(1);
+    await vi.waitFor(() => expect(calls).toBe(1));
     expect(bodyAtRequest).toBe(JSON.stringify({ token: TOKEN }));
     expect(hashAtRequest).toBe('');
-    expect(replaceSpy).toHaveBeenCalledTimes(1);
+    expect(replaceSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ hash: '' }),
+    );
+    expect(useRouter().currentRoute.value.hash).toBe('');
     expect(window.location.hash).toBe('');
     expect(wrapper.get('[data-testid="verify-success"]').text()).toContain(
       'Email verified. Sign in.',
@@ -73,6 +77,7 @@ describe('verify-email.vue (fragment handling)', () => {
 
   it('treats a missing token key as a local failure with no request',
     async () => {
+      await useRouter().replace('/verify-email#foo=bar');
       window.location.hash = '#foo=bar';
       let calls = 0;
       registerEndpoint('/api/v1/auth/password/verify', {
@@ -83,7 +88,7 @@ describe('verify-email.vue (fragment handling)', () => {
           return null;
         },
       });
-      const wrapper = await mountSuspended(VerifyEmailPage);
+      const wrapper = await mountSuspended(VerifyEmailPage, { route: '' });
       await flushPromises();
       expect(calls).toBe(0);
       expect(wrapper.get('[data-testid="verify-error"]').text()).toBe(
@@ -92,6 +97,7 @@ describe('verify-email.vue (fragment handling)', () => {
     });
 
   it('treats multiple token keys as malformed', async () => {
+    await useRouter().replace('/verify-email#token=a&token=b');
     window.location.hash = '#token=a&token=b';
     let calls = 0;
     registerEndpoint('/api/v1/auth/password/verify', {
@@ -102,13 +108,14 @@ describe('verify-email.vue (fragment handling)', () => {
         return null;
       },
     });
-    const wrapper = await mountSuspended(VerifyEmailPage);
+    const wrapper = await mountSuspended(VerifyEmailPage, { route: '' });
     await flushPromises();
     expect(calls).toBe(0);
     expect(wrapper.get('[data-testid="verify-error"]').exists()).toBe(true);
   });
 
   it('shows closed copy when the token is rejected as invalid', async () => {
+    await useRouter().replace('/verify-email#token=' + TOKEN);
     window.location.hash = `#token=${TOKEN}`;
     registerEndpoint('/api/v1/auth/password/verify', {
       method: 'POST',
@@ -119,15 +126,18 @@ describe('verify-email.vue (fragment handling)', () => {
         };
       },
     });
-    const wrapper = await mountSuspended(VerifyEmailPage);
+    const wrapper = await mountSuspended(VerifyEmailPage, { route: '' });
     await flushPromises();
-    expect(wrapper.get('[data-testid="verify-error"]').text()).toContain(
-      'invalid or has expired',
-    );
+    await vi.waitFor(() => {
+      expect(wrapper.get('[data-testid="verify-error"]').text()).toContain(
+        'invalid or has expired',
+      );
+    });
   });
 
   it('renders a no-referrer meta and loads no third-party resource',
     async () => {
+      await useRouter().replace('/verify-email#token=' + TOKEN);
       window.location.hash = `#token=${TOKEN}`;
       registerEndpoint('/api/v1/auth/password/verify', {
         method: 'POST',
@@ -136,7 +146,7 @@ describe('verify-email.vue (fragment handling)', () => {
           return null;
         },
       });
-      const wrapper = await mountSuspended(VerifyEmailPage);
+      const wrapper = await mountSuspended(VerifyEmailPage, { route: '' });
       await flushPromises();
       expect(vi.mocked(useHead)).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -153,6 +163,7 @@ describe('verify-email.vue (fragment handling)', () => {
 
   it('never re-submits after the token is stripped (refresh/replay)',
     async () => {
+      await useRouter().replace('/verify-email#token=' + TOKEN);
       window.location.hash = `#token=${TOKEN}`;
       let calls = 0;
       registerEndpoint('/api/v1/auth/password/verify', {
@@ -163,10 +174,10 @@ describe('verify-email.vue (fragment handling)', () => {
           return null;
         },
       });
-      await mountSuspended(VerifyEmailPage);
+      await mountSuspended(VerifyEmailPage, { route: '' });
       await flushPromises();
-      expect(calls).toBe(1);
-      await mountSuspended(VerifyEmailPage);
+      await vi.waitFor(() => expect(calls).toBe(1));
+      await mountSuspended(VerifyEmailPage, { route: '' });
       await flushPromises();
       expect(calls).toBe(1);
     });
@@ -177,7 +188,7 @@ describe('verify-email.vue (fragment handling)', () => {
         path: '/app/resumes',
         expiresAt: Date.now() + 1000,
       }));
-      const wrapper = await mountSuspended(VerifyEmailPage);
+      const wrapper = await mountSuspended(VerifyEmailPage, { route: '' });
       await flushPromises();
       expect(
         wrapper.get('[data-testid="verify-sign-in"]').attributes('href'),
@@ -186,7 +197,7 @@ describe('verify-email.vue (fragment handling)', () => {
     });
 
   it('links to plain /login with no stored next', async () => {
-    const wrapper = await mountSuspended(VerifyEmailPage);
+    const wrapper = await mountSuspended(VerifyEmailPage, { route: '' });
     await flushPromises();
     expect(
       wrapper.get('[data-testid="verify-sign-in"]').attributes('href'),
@@ -202,7 +213,7 @@ describe('verify-email.vue (fragment handling)', () => {
       },
     });
     try {
-      const wrapper = await mountSuspended(VerifyEmailPage);
+      const wrapper = await mountSuspended(VerifyEmailPage, { route: '' });
       await flushPromises();
       expect(
         wrapper.get('[data-testid="verify-sign-in"]').attributes('href'),

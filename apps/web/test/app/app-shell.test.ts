@@ -283,7 +283,9 @@ describe('AppShell', () => {
       .querySelector<HTMLElement>('[data-testid="account-menu-logout"]')
       ?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     await flushPromises();
-    expect(vi.mocked(navigateTo)).toHaveBeenCalledWith('/login');
+    expect(vi.mocked(navigateTo)).toHaveBeenCalledWith('/login', {
+      external: true,
+    });
   });
   it('moves signed-in theme control into the account menu', async () => {
     meStatus = 200;

@@ -66,6 +66,8 @@ describe('sessions.vue', () => {
   beforeEach(() => {
     setSiteLocale('en');
     vi.mocked(navigateTo).mockClear();
+    vi.spyOn(useRouter().options.history, 'destroy')
+      .mockImplementation(() => {});
   });
 
   it('lists sessions and treats the current one distinctly', async () => {
@@ -422,6 +424,7 @@ describe('sessions.vue', () => {
         },
       });
 
+      const remove = vi.spyOn(sessionStorage, 'removeItem');
       const wrapper = await mountSuspended(SessionsPage);
       await flushPromises();
 
@@ -432,7 +435,18 @@ describe('sessions.vue', () => {
       await flushPromises();
       await flushPromises();
 
-      expect(vi.mocked(navigateTo)).toHaveBeenCalledWith('/login');
+      const destroy = vi.mocked(useRouter().options.history.destroy);
+      expect(destroy).toHaveBeenCalledOnce();
+      expect(remove).toHaveBeenCalledWith('vue-router:scroll');
+      expect(destroy.mock.invocationCallOrder[0]).toBeLessThan(
+        vi.mocked(navigateTo).mock.invocationCallOrder[0]!,
+      );
+      expect(remove.mock.invocationCallOrder[0]).toBeLessThan(
+        vi.mocked(navigateTo).mock.invocationCallOrder[0]!,
+      );
+      expect(vi.mocked(navigateTo)).toHaveBeenCalledWith('/login', {
+        external: true,
+      });
       expect(meGetCalls).toBe(meGetCallsAtMount);
       expect(sessionsGetCalls).toBe(sessionsGetCallsAtMount);
     },

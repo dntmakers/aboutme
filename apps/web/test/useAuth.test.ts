@@ -102,6 +102,8 @@ const Probe = defineComponent({
 describe('useAuth', () => {
   beforeEach(() => {
     vi.mocked(navigateTo).mockClear();
+    vi.spyOn(useRouter().options.history, 'destroy')
+      .mockImplementation(() => {});
   });
 
   // eslint-disable-next-line max-len
@@ -244,13 +246,25 @@ describe('useAuth', () => {
       },
     });
 
+    const remove = vi.spyOn(sessionStorage, 'removeItem');
     const wrapper = await mountSuspended(Probe);
     await flushPromises();
 
     await wrapper.get('[data-testid="logout-button"]').trigger('click');
     await flushPromises();
 
-    expect(vi.mocked(navigateTo)).toHaveBeenCalledWith('/login');
+    const destroy = vi.mocked(useRouter().options.history.destroy);
+    expect(destroy).toHaveBeenCalledOnce();
+    expect(remove).toHaveBeenCalledWith('vue-router:scroll');
+    expect(destroy.mock.invocationCallOrder[0]).toBeLessThan(
+      vi.mocked(navigateTo).mock.invocationCallOrder[0]!,
+    );
+    expect(remove.mock.invocationCallOrder[0]).toBeLessThan(
+      vi.mocked(navigateTo).mock.invocationCallOrder[0]!,
+    );
+    expect(vi.mocked(navigateTo)).toHaveBeenCalledWith('/login', {
+      external: true,
+    });
   });
 
   it(

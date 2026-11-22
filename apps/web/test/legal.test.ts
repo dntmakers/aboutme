@@ -37,6 +37,11 @@ describe('privacy and terms pages', () => {
   it('render the Privacy Policy in Vietnamese by default', async () => {
     const wrapper = await mountSuspended(PrivacyPage);
     expect(title(wrapper)).toBe('Chính sách quyền riêng tư');
+    expect(wrapper.text()).toContain(
+      'Trang web lưu địa chỉ các trang bạn đã xem và vị trí cuộn trong bộ '
+      + 'nhớ phiên của thẻ để khi quay lại, bạn thấy đúng chỗ cũ. Dữ liệu '
+      + 'này chỉ nằm trong trình duyệt suốt phiên của thẻ.',
+    );
     expect(wrapper.get('[data-testid="legal-updated"]').text()).toBe(
       'Cập nhật lần cuối ngày 21/11/2026',
     );
@@ -172,6 +177,11 @@ describe('privacy and terms pages', () => {
     setSiteLocale('en');
     const wrapper = await mountSuspended(PrivacyPage);
     expect(title(wrapper)).toBe('Privacy Policy');
+    expect(wrapper.text()).toContain(
+      'The site keeps the addresses of pages you visited and their scroll '
+      + 'positions in the tab’s session storage so Back returns you to the '
+      + 'same place. This stays in your browser for the tab session.',
+    );
     expect(wrapper.get('[data-testid="legal-updated"]').text()).toBe(
       'Last updated November 21, 2026',
     );

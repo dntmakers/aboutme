@@ -129,7 +129,7 @@ export const legalEn: LegalCopy = {
           + 'sign-in for five minutes, to remember your theme and '
           + 'language, and, when a resume owner requires sign-in to '
           + 'view, to let you view that resume for 7 days.',
-          'Browser storage is used only to remember: the page to return '
+          'Browser storage is used to remember: the page to return '
           + 'to after you verify your email (for up to 24 hours); the '
           + 'preview mode (PDF or web), zoom, and editor panel width you '
           + 'chose in the resume editor; whether you closed the '
@@ -137,6 +137,9 @@ export const legalEn: LegalCopy = {
           + 'browser session only (sessionStorage), when a public resume '
           + 'page last reloaded itself, to stop reload loops. None of '
           + 'this is sent to our servers.',
+          'The site keeps the addresses of pages you visited and their scroll '
+          + 'positions in the tab’s session storage so Back returns you to the '
+          + 'same place. This stays in your browser for the tab session.',
         ],
       },
       {

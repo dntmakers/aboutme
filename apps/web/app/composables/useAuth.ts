@@ -1,4 +1,5 @@
 import { nextTick, type ComputedRef } from 'vue';
+import type { Router } from 'vue-router';
 import {
   isLocale,
   localeCookie,
@@ -108,7 +109,21 @@ function restoreLocaleCookie(chosen: Locale): void {
   writeLocaleCookie(value);
 }
 
+export async function leaveEndedSession(router: Router): Promise<void> {
+  if (import.meta.client) {
+    router.options.history.destroy();
+    try {
+      sessionStorage.removeItem('vue-router:scroll');
+    } catch {
+      await navigateTo('/login', { external: true });
+      return;
+    }
+  }
+  await navigateTo('/login', { external: true });
+}
+
 export function useAuth(): UseAuthReturn {
+  const router = useRouter();
   const {
     data,
     error,
@@ -193,7 +208,7 @@ export function useAuth(): UseAuthReturn {
   async function logout(): Promise<void> {
     await mutate('/api/v1/auth/logout', { method: 'POST' });
     data.value = undefined;
-    await navigateTo('/login');
+    await leaveEndedSession(router);
   }
 
   return {

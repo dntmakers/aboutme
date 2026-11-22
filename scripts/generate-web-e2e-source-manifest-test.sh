@@ -44,6 +44,7 @@ for path in \
   apps/web/e2e/corpus.spec.ts \
   apps/web/nuxt.config.ts \
   apps/web/package.json \
+  apps/web/patches/example.patch \
   apps/web/public/theme-bootstrap.js \
   apps/web/scripts/generate-template-pages.mts \
   apps/web/scripts/validate-template-pages.mts \
@@ -93,6 +94,7 @@ apps/web/app/app.vue
 apps/web/e2e/corpus.spec.ts
 apps/web/nuxt.config.ts
 apps/web/package.json
+apps/web/patches/example.patch
 apps/web/public/theme-bootstrap.js
 apps/web/scripts/generate-template-pages.mts
 apps/web/scripts/validate-template-pages.mts

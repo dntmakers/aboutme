@@ -38,8 +38,10 @@ document stores no template identity.
    closed list. No contact detail, date, count, or body text.
 4. **Order and filters without tracking.** Oldest opt-in first
    (`requested_at ASC, resume_id ASC`). Filters for role, language, and template
-   live in the URL. The page sets no cookie, uses no browser storage, and runs
-   no counting script.
+   live in the URL. The page sets no cookie, stores no listing data or separate
+   filter state in browser storage, and runs no counting script. Vue Router
+   stores visited page addresses and scroll positions in the tab session for
+   Back navigation.
 5. **Never indexed.** `/showcase` is `noindex, nofollow` and outside the sitemap
    and `llms.txt`. A resume's SEO and GEO switch keeps its meaning.
 6. **Uncached listing.** The browser reads the listing from a Go route that
@@ -83,6 +85,9 @@ document stores no template identity.
   [ADR 0026](0026-vietnam-hosted-production.md).
 
 ## History
+
+- Amended (2026-11-22): the owner accepted Vue Router 5.5.1 storing visited page
+  addresses and scroll positions in the tab session for Back navigation.
 
 - Accepted (2026-09-27): the owner approved S1 to S13 in the showcase design as
   written, including the privacy and terms text and no advance email (S11).

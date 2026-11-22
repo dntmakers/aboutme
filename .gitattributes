@@ -1,1 +1,2 @@
+apps/web/patches/*.patch whitespace=-space-before-tab
 apps/web/public/font-licenses/** binary

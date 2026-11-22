@@ -31,18 +31,22 @@ onMounted(() => {
 });
 
 let token = '';
+let tokenScrub: Promise<unknown> = Promise.resolve();
 
 if (import.meta.client) {
   const { hash } = window.location;
   const params = new URLSearchParams(hash.replace(/^#/, ''));
   const values = params.getAll('token').filter((value) => value !== '');
+  if (hash) {
+    tokenScrub = useRouter().replace({
+      path: useRoute().path,
+      query: useRoute().query,
+      hash: '',
+      force: true,
+    });
+  }
   if (values.length === 1) {
     token = values[0] as string;
-    history.replaceState(
-      null,
-      '',
-      window.location.pathname + window.location.search,
-    );
   } else {
     status.value = 'error';
     errorMessage.value = 'verifyLinkIncomplete';
@@ -50,8 +54,9 @@ if (import.meta.client) {
 }
 
 if (token !== '') {
-  usePasswordAuth()
-    .verify(token)
+  const passwordAuth = usePasswordAuth();
+  tokenScrub
+    .then(() => passwordAuth.verify(token))
     .then(() => {
       status.value = 'success';
     })

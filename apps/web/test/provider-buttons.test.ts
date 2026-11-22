@@ -34,8 +34,20 @@ function providerLinks(wrapper: Queryable): Record<string, string> {
 async function mountAfterCapabilities(
   page: typeof LoginPage,
 ): Promise<Wrapper> {
-  const wrapper = await mountSuspended(page);
+  const hash = window.location.hash;
+  if (page === VerifyEmailPage) {
+    await useRouter().replace('/verify-email' + hash);
+    window.location.hash = hash;
+  }
+  const wrapper = await mountSuspended(page, {
+    route: page === VerifyEmailPage ? '' : '/',
+  });
   await flushPromises();
+  if (page === VerifyEmailPage && hash) {
+    await vi.waitFor(() => {
+      expect(wrapper.find('[data-testid="verify-error"]').exists()).toBe(true);
+    });
+  }
   return wrapper;
 }
 

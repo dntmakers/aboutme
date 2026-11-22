@@ -121,9 +121,11 @@ See [Terms of Service](showcase-copy.md#terms-of-service).
   them. The copy states this, and the page is kept out of search indexes.
 - **Scraping.** The listing is paged, rate limited, and holds no contact data;
   bulk copying cannot be prevented, as the privacy text says.
-- **Viewers.** The page records nothing about visitors, sets no cookie, and runs
-  no counting script. A click on a tile is an ordinary view of that resume,
-  counted as [counting](viewer-analytics/counting.md) describes, with no
+- **Viewers.** The page keeps no server-side visitor records, sets no cookie,
+  and runs no counting script. The
+  [showcase contract](showcase-contract.md#order-and-filters) describes the tab
+  session storage exception. A click on a tile is an ordinary view of that
+  resume, counted as [counting](viewer-analytics/counting.md) describes, with no
   referrer kept.
 - **Abuse.** Spam, impersonation, offensive content, and other people's data are
   handled after a report: the operator deletes the account

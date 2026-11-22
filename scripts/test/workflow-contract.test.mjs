@@ -1787,7 +1787,6 @@ test("Dependabot contract rejects missing grouping and changed scope or cadence"
           { "dependency-name": "playwright-core" },
           { "dependency-name": "typescript" },
           { "dependency-name": "pdfjs-dist" },
-          { "dependency-name": "vue-router", versions: [">=5.5.0"] },
         ],
       },
       {
@@ -1927,7 +1926,6 @@ function checkDependabot(config) {
       ...browserPackages,
       { "dependency-name": "typescript" },
       { "dependency-name": "pdfjs-dist" },
-      { "dependency-name": "vue-router", versions: [">=5.5.0"] },
     ]],
     ["npm", ["/deploy/dev-https-browser"], [...browserPackages, { "dependency-name": "@axe-core/playwright" }]],
   ];
