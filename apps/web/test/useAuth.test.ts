@@ -250,7 +250,9 @@ describe('useAuth', () => {
     await wrapper.get('[data-testid="logout-button"]').trigger('click');
     await flushPromises();
 
-    expect(vi.mocked(navigateTo)).toHaveBeenCalledWith('/login');
+    expect(vi.mocked(navigateTo)).toHaveBeenCalledWith('/login', {
+      external: true,
+    });
   });
 
   it(

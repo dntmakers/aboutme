@@ -26,18 +26,22 @@ const success = ref(false);
 const tokenError = ref<AuthMessage | null>(null);
 
 let token = '';
+let tokenScrub: Promise<unknown> = Promise.resolve();
 
 if (import.meta.client) {
   const { hash } = window.location;
   const params = new URLSearchParams(hash.replace(/^#/, ''));
   const values = params.getAll('token').filter((value) => value !== '');
+  if (hash) {
+    tokenScrub = useRouter().replace({
+      path: useRoute().path,
+      query: useRoute().query,
+      hash: '',
+      force: true,
+    });
+  }
   if (values.length === 1) {
     token = values[0] as string;
-    history.replaceState(
-      null,
-      '',
-      window.location.pathname + window.location.search,
-    );
   } else {
     tokenError.value = 'resetLinkIncomplete';
   }
@@ -79,6 +83,7 @@ async function onSubmit() {
   errorMessage.value = null;
   const resetToken = token;
   try {
+    await tokenScrub;
     await usePasswordAuth().reset({
       token: resetToken,
       password: password.value,

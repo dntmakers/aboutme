@@ -416,7 +416,7 @@ test('keeps the full logo and header link from 64rem', async ({ page }) => {
   expect(await overflow(page)).toBe(0);
 });
 
-test('stores nothing and sends no cookie with the listing', async ({
+test('keeps listing requests uncached and without cookies', async ({
   page,
   context,
 }) => {
@@ -434,9 +434,11 @@ test('stores nothing and sends no cookie with the listing', async ({
   expect(reply?.headers()['cache-control']).toContain('no-store');
   const storage = await page.evaluate(() => ({
     local: localStorage.length,
-    session: sessionStorage.length,
+    session: Object.keys(sessionStorage),
   }));
-  expect(storage).toEqual({ local: 0, session: 0 });
+  expect(storage.local).toBe(0);
+  expect(storage.session.every((key) => key === 'vue-router:scroll'))
+    .toBe(true);
   expect((await context.cookies()).map((cookie) => cookie.name))
     .toEqual(['aboutme-locale']);
 });

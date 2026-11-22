@@ -193,7 +193,7 @@ export function useAuth(): UseAuthReturn {
   async function logout(): Promise<void> {
     await mutate('/api/v1/auth/logout', { method: 'POST' });
     data.value = undefined;
-    await navigateTo('/login');
+    await navigateTo('/login', { external: true });
   }
 
   return {

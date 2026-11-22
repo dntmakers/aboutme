@@ -137,10 +137,9 @@ export const legalEn: LegalCopy = {
           + 'browser session only (sessionStorage), when a public resume '
           + 'page last reloaded itself, to stop reload loops. None of '
           + 'this is sent to our servers.',
-          'The site keeps scroll positions in the tab’s session storage '
-          + 'so Back '
-          + 'returns you to the same place. This stays in your browser and is '
-          + 'cleared when you close the tab.',
+          'The site keeps the addresses of pages you visited and their scroll '
+          + 'positions in the tab’s session storage so Back returns you to the '
+          + 'same place. This stays in your browser for the tab session.',
         ],
       },
       {

@@ -96,7 +96,9 @@ describe('useAuth mutate() CSRF x rotation self-heal', () => {
       expect(meGetCalls).toBe(2);
       expect(receivedHeaders[0]).toBe('test-csrf-token');
       expect(receivedHeaders[1]).toBe('rotated-csrf-token');
-      expect(vi.mocked(navigateTo)).toHaveBeenCalledWith('/login');
+      expect(vi.mocked(navigateTo)).toHaveBeenCalledWith('/login', {
+        external: true,
+      });
     },
   );
 });

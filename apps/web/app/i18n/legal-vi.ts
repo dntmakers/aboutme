@@ -145,10 +145,9 @@ export const legalVi: LegalCopy = {
           + 'duyệt hiện tại (sessionStorage), thời điểm một trang CV công '
           + 'khai tự tải lại lần cuối, để tránh tải lại liên tục. Không có '
           + 'dữ liệu nào trong số này được gửi đến máy chủ.',
-          'Trang web lưu vị trí cuộn trong bộ nhớ phiên của thẻ để khi bạn '
-          + 'quay lại, '
-          + 'trang hiện đúng chỗ cũ. Dữ liệu này không rời khỏi trình duyệt và '
-          + 'được xóa khi bạn đóng thẻ.',
+          'Trang web lưu địa chỉ các trang bạn đã xem và vị trí cuộn trong bộ '
+          + 'nhớ phiên của thẻ để khi quay lại, bạn thấy đúng chỗ cũ. Dữ liệu '
+          + 'này chỉ nằm trong trình duyệt suốt phiên của thẻ.',
         ],
       },
       {

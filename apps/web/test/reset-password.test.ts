@@ -19,7 +19,7 @@ const NEW_PASSWORD = 'correct horse battery staple';
 describe('reset-password.vue (fragment handling)', () => {
   it('composes the auth page and shared error banner', async () => {
     window.location.hash = '';
-    const wrapper = await mountSuspended(ResetPasswordPage);
+    const wrapper = await mountSuspended(ResetPasswordPage, { route: '' });
 
     const main = wrapper.get('[data-testid="reset-password-page"]');
     expect(main.find('[data-slot="card"]').exists()).toBe(false);
@@ -34,15 +34,16 @@ describe('reset-password.vue (fragment handling)', () => {
     );
   });
 
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.mocked(useHead).mockClear();
-    window.location.hash = '';
+    await useRouter().replace('/reset-password');
   });
 
   it('strips a single token before submit and posts token + new password',
     async () => {
+      await useRouter().replace('/reset-password#token=' + TOKEN);
       window.location.hash = `#token=${TOKEN}`;
-      const replaceSpy = vi.spyOn(history, 'replaceState');
+      const replaceSpy = vi.spyOn(useRouter(), 'replace');
       let hashAtRequest = 'unset';
       let body: string | null = null;
       let calls = 0;
@@ -56,7 +57,7 @@ describe('reset-password.vue (fragment handling)', () => {
           return null;
         },
       });
-      const wrapper = await mountSuspended(ResetPasswordPage);
+      const wrapper = await mountSuspended(ResetPasswordPage, { route: '' });
       expect(wrapper.get('[aria-label="Show new password"]').exists()).toBe(
         true,
       );
@@ -65,13 +66,16 @@ describe('reset-password.vue (fragment handling)', () => {
       await wrapper.get('[data-testid="reset-form"]').trigger('submit');
       await flushPromises();
 
-      expect(calls).toBe(1);
+      await vi.waitFor(() => expect(calls).toBe(1));
       expect(hashAtRequest).toBe('');
       expect(JSON.parse(body ?? '{}')).toEqual({
         token: TOKEN,
         password: NEW_PASSWORD,
       });
-      expect(replaceSpy).toHaveBeenCalledTimes(1);
+      expect(replaceSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ hash: '' }),
+      );
+      expect(useRouter().currentRoute.value.hash).toBe('');
       expect(wrapper.get('[data-testid="reset-success"]').text()).toContain(
         'Password reset. Sign in.',
       );
@@ -80,6 +84,7 @@ describe('reset-password.vue (fragment handling)', () => {
 
   it('renders a local error and no form when the fragment token is malformed',
     async () => {
+      await useRouter().replace('/reset-password#token=a&token=b');
       window.location.hash = '#token=a&token=b';
       let calls = 0;
       registerEndpoint('/api/v1/auth/password/reset', {
@@ -90,7 +95,7 @@ describe('reset-password.vue (fragment handling)', () => {
           return null;
         },
       });
-      const wrapper = await mountSuspended(ResetPasswordPage);
+      const wrapper = await mountSuspended(ResetPasswordPage, { route: '' });
       await flushPromises();
       expect(calls).toBe(0);
       expect(wrapper.find('[data-testid="reset-form"]').exists()).toBe(false);
@@ -100,6 +105,7 @@ describe('reset-password.vue (fragment handling)', () => {
     });
 
   it('shows a local mismatch error and does not submit', async () => {
+    await useRouter().replace('/reset-password#token=' + TOKEN);
     window.location.hash = `#token=${TOKEN}`;
     let calls = 0;
     registerEndpoint('/api/v1/auth/password/reset', {
@@ -110,7 +116,7 @@ describe('reset-password.vue (fragment handling)', () => {
         return null;
       },
     });
-    const wrapper = await mountSuspended(ResetPasswordPage);
+    const wrapper = await mountSuspended(ResetPasswordPage, { route: '' });
     await wrapper.get('#reset-password').setValue(NEW_PASSWORD);
     await wrapper.get('#reset-password-confirm').setValue('different');
     await wrapper.get('[data-testid="reset-form"]').trigger('submit');
@@ -122,6 +128,7 @@ describe('reset-password.vue (fragment handling)', () => {
   });
 
   it('shows closed copy for a password policy rejection', async () => {
+    await useRouter().replace('/reset-password#token=' + TOKEN);
     window.location.hash = `#token=${TOKEN}`;
     registerEndpoint('/api/v1/auth/password/reset', {
       method: 'POST',
@@ -136,17 +143,20 @@ describe('reset-password.vue (fragment handling)', () => {
         };
       },
     });
-    const wrapper = await mountSuspended(ResetPasswordPage);
+    const wrapper = await mountSuspended(ResetPasswordPage, { route: '' });
     await wrapper.get('#reset-password').setValue(NEW_PASSWORD);
     await wrapper.get('#reset-password-confirm').setValue(NEW_PASSWORD);
     await wrapper.get('[data-testid="reset-form"]').trigger('submit');
     await flushPromises();
-    expect(wrapper.get('[data-testid="reset-error"]').text()).toContain(
-      'data breach',
-    );
+    await vi.waitFor(() => {
+      expect(wrapper.get('[data-testid="reset-error"]').text()).toContain(
+        'data breach',
+      );
+    });
   });
 
   it('renders a no-referrer meta', async () => {
+    await useRouter().replace('/reset-password#token=' + TOKEN);
     window.location.hash = `#token=${TOKEN}`;
     registerEndpoint('/api/v1/auth/password/reset', {
       method: 'POST',
@@ -155,7 +165,7 @@ describe('reset-password.vue (fragment handling)', () => {
         return null;
       },
     });
-    await mountSuspended(ResetPasswordPage);
+    await mountSuspended(ResetPasswordPage, { route: '' });
     await flushPromises();
     expect(vi.mocked(useHead)).toHaveBeenCalledWith(
       expect.objectContaining({
