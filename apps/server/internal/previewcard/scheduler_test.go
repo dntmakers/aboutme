@@ -1,8 +1,10 @@
 package previewcard
 
 import (
+	"bytes"
 	"context"
 	"errors"
+	"log/slog"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -215,6 +217,45 @@ func TestDeleteAndUnpublishBuildNothing(t *testing.T) {
 	if h.queue.renderCalls() != 1 {
 		t.Fatalf("renders = %d, want only the build before the delete", h.queue.renderCalls())
 	}
+}
+
+func TestResumeDeletedDuringABuildIsSkippedNotLogged(t *testing.T) {
+	t.Parallel()
+	h := newSchedulerHarness(t)
+	var logs lockedBuffer
+	h.scheduler.logger = slog.New(slog.NewTextHandler(&logs, nil))
+	h.queue.gate = make(chan struct{})
+	h.run(t)
+	h.idle(t)
+	snapshot := testSnapshot(t, "Ada Lovelace", "", nil)
+	h.cards.setLive(snapshot)
+	h.scheduler.Notify(snapshot.ResumeID, false)
+	waitUntil(t, func() bool { return h.queue.renderCalls() == 1 })
+	h.cards.mu.Lock()
+	delete(h.cards.live, snapshot.ResumeID)
+	h.cards.mu.Unlock()
+	close(h.queue.gate)
+	h.idle(t)
+	if got := logs.String(); got != "" {
+		t.Fatalf("logged %q, want nothing for a deleted resume", got)
+	}
+}
+
+type lockedBuffer struct {
+	mu  sync.Mutex
+	buf bytes.Buffer
+}
+
+func (b *lockedBuffer) Write(p []byte) (int, error) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return b.buf.Write(p)
+}
+
+func (b *lockedBuffer) String() string {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return b.buf.String()
 }
 
 func TestStartSweepQueuesStaleCardsOneInterval(t *testing.T) {

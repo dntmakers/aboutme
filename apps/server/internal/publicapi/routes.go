@@ -33,6 +33,27 @@ func (s *Service) Recognizes(escapedPath string) bool {
 	return classifyPublicRoute(escapedPath) != publicRouteNone
 }
 
+var publicRouteClasses = map[publicRoute]string{
+	publicRouteJSON:        "public_json",
+	publicRoutePhoto:       "public_photo",
+	publicRoutePDF:         "public_pdf",
+	publicRoutePNG:         "public_og_png",
+	publicRouteCard:        "public_card",
+	publicRouteHTML:        "public_resume",
+	publicRouteMarkdown:    "public_markdown",
+	publicRouteSitemap:     "public_sitemap",
+	publicRouteRobots:      "public_robots",
+	publicRouteLLMS:        "public_llms",
+	publicRouteLive:        "public_live",
+	publicRouteShowcase:    "public_showcase",
+	publicRouteProjectList: "public_project_list",
+	publicRouteProject:     "public_project",
+}
+
+func (s *Service) RouteClass(escapedPath string) string {
+	return publicRouteClasses[classifyPublicRoute(escapedPath)]
+}
+
 func (s *Service) ServeHTTP(w http.ResponseWriter, request *http.Request) {
 	switch classifyPublicRoute(request.URL.EscapedPath()) {
 	case publicRouteShowcase:

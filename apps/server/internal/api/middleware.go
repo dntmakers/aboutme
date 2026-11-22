@@ -19,7 +19,10 @@ const RequestIDHeader = "X-Request-Id"
 
 type contextKey int
 
-const requestIDContextKey contextKey = iota
+const (
+	requestIDContextKey contextKey = iota
+	logRouteContextKey
+)
 
 func RequestID(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -46,21 +49,34 @@ func newRequestID() string {
 	return hex.EncodeToString(b[:])
 }
 
+type logRoute struct{ class string }
+
+func SetLogRoute(ctx context.Context, class string) {
+	if route, ok := ctx.Value(logRouteContextKey).(*logRoute); ok {
+		route.class = class
+	}
+}
+
 func Logging(logger *slog.Logger) Middleware {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			start := time.Now()
 			sw := &statusWriter{ResponseWriter: w, status: http.StatusOK}
+			route := &logRoute{}
 
-			next.ServeHTTP(sw, r)
+			next.ServeHTTP(sw, r.WithContext(context.WithValue(r.Context(), logRouteContextKey, route)))
 
-			logger.Info("http_request",
-				"method", r.Method,
-				"path", r.URL.Path,
+			where := []any{"path", r.URL.Path}
+			if route.class != "" {
+				where = []any{"route", route.class}
+			}
+			attrs := append([]any{"method", r.Method}, where...)
+			attrs = append(attrs,
 				"status", sw.status,
 				"duration_ms", time.Since(start).Milliseconds(),
 				"request_id", RequestIDFromContext(r.Context()),
 			)
+			logger.Info("http_request", attrs...)
 		})
 	}
 }
