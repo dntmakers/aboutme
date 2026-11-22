@@ -15,6 +15,9 @@ nodeLinker: isolated
 virtualStoreType: project
 virtualStoreDir: node_modules/.pnpm
 
+patchedDependencies:
+  vue-router@5.5.1: apps/web/patches/vue-router@5.5.1.patch
+
 overrides:
   zod: ^4.6.6
   markdownlint>re2js: 2.8.7

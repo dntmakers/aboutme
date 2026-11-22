@@ -33,6 +33,7 @@ source_roots=(
   apps/web/e2e
   apps/web/nuxt.config.ts
   apps/web/package.json
+  apps/web/patches
   apps/web/public
   apps/web/scripts/generate-template-pages.mts
   apps/web/scripts/validate-template-pages.mts

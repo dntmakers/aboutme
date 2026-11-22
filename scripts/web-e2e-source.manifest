@@ -671,6 +671,7 @@ apps/web/e2e/verify-support.ts
 apps/web/e2e/verify.spec.ts
 apps/web/nuxt.config.ts
 apps/web/package.json
+apps/web/patches/vue-router@5.5.1.patch
 apps/web/public/apple-touch-icon-v4.png
 apps/web/public/csp-bootstrap.js
 apps/web/public/favicon-v4.svg

@@ -1,0 +1,19 @@
+diff --git a/dist/devtools-RytpElE1.js b/dist/devtools-RytpElE1.js
+--- a/dist/devtools-RytpElE1.js
++++ b/dist/devtools-RytpElE1.js
+@@ -389,7 +389,14 @@
+ const scrollPositions = /*#__PURE__*/ readScrollPositions();
+ function persistScrollPositions() {
+ 	try {
+-		sessionStorage[SCROLL_KEY] = JSON.stringify(scrollPositions);
++		const safePositions = Object.fromEntries(Object.entries(scrollPositions).filter(([key]) => {
++			const path = key.match(/^-?\d+(\/[^?#]*)/)?.[1];
++			if (!path) return true;
++			let decoded = path;
++			try { decoded = decodeURIComponent(path); } catch {}
++			return !/^\/(reset-password|verify-email)\/?$/i.test(decoded);
++		}));
++		sessionStorage[SCROLL_KEY] = JSON.stringify(safePositions);
+ 	} catch {}
+ }
+ function getScrollKey(path, delta) {

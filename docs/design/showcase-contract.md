@@ -63,11 +63,10 @@ listing data or separate filter state in browser storage. Vue Router stores
 visited page addresses (path, query, and hash) and scroll positions in the tab’s
 `sessionStorage` under `vue-router:scroll` for Back navigation; they stay in the
 browser for the tab session (owner, 2026-11-22). Signed-in page addresses may
-remain there after sign-out. The reset and verify pages strip token fragments
-through the router, and session exits tear down the router's scroll listener
-first; a page hidden before the router finishes stripping can still store a
-single-use token fragment (accepted). The page runs no counting script and
-personalizes nothing.
+remain there after sign-out. The router does not persist reset-password or
+verify-email URLs in its scroll records. The reset and verify pages strip token
+fragments through the router, and session exits tear down the router's scroll
+listener first. The page runs no counting script and personalizes nothing.
 
 Twelve listings show per page (**Owner approval** S13), with Previous and Next
 links and `?page=`. Card images load lazily; a page of 12 moves at most about 3

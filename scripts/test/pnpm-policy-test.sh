@@ -26,19 +26,15 @@ isolated=(--registry http://127.0.0.1:9/ --store-dir "$WORK/store"
 
 project() {
   local dir=$1 manifest=$2 settings=$3
+  local -a edits=(-e '/^packages:$/,/^$/d' -e '/^patchedDependencies:$/,/^$/d')
   mkdir -p "$WORK/$dir"
   printf '%s\n' "$manifest" >"$WORK/$dir/package.json"
   case $settings in
-  committed) sed '/^packages:$/,/^$/d' "$ROOT/pnpm-workspace.yaml" >"$WORK/$dir/pnpm-workspace.yaml" ;;
-  without-pm-on-fail)
-    sed -e '/^packages:$/,/^$/d' -e '/^pmOnFail:/d' "$ROOT/pnpm-workspace.yaml" \
-      >"$WORK/$dir/pnpm-workspace.yaml"
-    ;;
-  pin-unrecorded)
-    sed -e '/^packages:$/,/^$/d' -e 's/^pmOnFail: .*/pmOnFail: ignore/' "$ROOT/pnpm-workspace.yaml" \
-      >"$WORK/$dir/pnpm-workspace.yaml"
-    ;;
+    committed) ;;
+    without-pm-on-fail) edits+=(-e '/^pmOnFail:/d') ;;
+    pin-unrecorded) edits+=(-e 's/^pmOnFail: .*/pmOnFail: ignore/') ;;
   esac
+  sed "${edits[@]}" "$ROOT/pnpm-workspace.yaml" >"$WORK/$dir/pnpm-workspace.yaml"
 }
 
 run_pnpm() {
