@@ -903,12 +903,15 @@ unset OWNER_FILE
 
 [[ -s $work/ssh-calls.log ]] || { echo "deploy.sh reached no SSH call" >&2; exit 1; }
 hash_failures=0
-while read -r required; do
+mapfile -t required_files < <(sed -n '/^for required in /,/; do$/p' "$repo_root/deploy/vn/host/install.sh" | tr ' ;\\' '\n\n\n' | grep -E '^(host|scripts)/')
+((${#required_files[@]} >= 4)) && printf '%s\n' "${required_files[@]}" | grep -qxF scripts/image-prune.sh ||
+  { echo "install.sh required list parsed wrongly" >&2; exit 1; }
+for required in "${required_files[@]}"; do
   [[ $required == scripts/* && $required != scripts/crowdsec-privacy-notice.sh ]] || continue
   name=${required##*/}
   grep -qxF "$repo_root/deploy/vn/scripts/$name" "$work/hashed-local.log" || { echo "deploy.sh did not hash $name locally" >&2; hash_failures=1; }
   grep -qxF "/usr/local/lib/aboutme/$name" "$work/hashed-remote.log" || { echo "deploy.sh did not hash $name on the host" >&2; hash_failures=1; }
-done < <(sed -n '/^for required in /,/; do$/p' "$repo_root/deploy/vn/host/install.sh" | tr ' ;\\' '\n\n\n' | grep -E '^(host|scripts)/')
+done
 ((hash_failures == 0)) || exit 1
 if [[ -s $work/keepalive-missing.log ]]; then
   echo "SSH calls without ServerAliveInterval=15 and ServerAliveCountMax=4:" >&2

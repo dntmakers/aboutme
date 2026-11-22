@@ -200,7 +200,7 @@ install_admission_transition() (
 )
 
 install_postgresql_config() {
-  local src=$1 action=$2 changed='' file mode
+  local src=$1 changed='' file mode
   install -d -o postgres -g postgres -m 0755 /etc/postgresql/18/main/conf.d || return 1
   for file in pg_hba.conf pg_ident.conf conf.d/90-aboutme.conf; do
     mode=0640
@@ -210,7 +210,7 @@ install_postgresql_config() {
       "$src/$file" "/etc/postgresql/18/main/$file") || return 1
   done
   if [[ -n $changed ]]; then
-    timeout --kill-after=1s 10 systemctl "$action" postgresql@18-main.service || return 1
+    timeout --kill-after=1s 10 systemctl reload postgresql@18-main.service || return 1
   fi
 }
 
@@ -420,7 +420,7 @@ crowdsec_install_closed=yes
 install_admission_transition --shared-fence install_crowdsec_bootstrap_retention || die "crowdsec_retention_refused"
 
 # Copy and reload peer policy under the same exclusion, preserving the epoch.
-install_admission_transition install_postgresql_config "$etc/postgresql/18/main" reload
+install_admission_transition install_postgresql_config "$etc/postgresql/18/main"
 [[ $(findmnt -n -o FSTYPE -T /run/aboutme) == tmpfs ]] || die "CrowdSec diagnostics require tmpfs"
 install -d -o root -g root -m 0700 /run/aboutme/crowdsec
 "$lib/crowdsec-window-check.sh"

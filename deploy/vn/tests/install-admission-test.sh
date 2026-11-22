@@ -271,104 +271,102 @@ PY
   printf 'PASS snapshot-preserves-admission-metadata-contract\n'
 )
 
-# shellcheck disable=SC2043
-for mode in ordinary; do
-  export FIXTURE_CASE=$work/$mode FIXTURE_TICK=no FIXTURE_DRIFT=no
-  export FIXTURE_LEASE_NOW=1577836801
-  mkdir -p "$FIXTURE_CASE/etc/pgbackrest" "$FIXTURE_CASE/etc/postgresql/18/main" \
-    "$FIXTURE_CASE/etc/crowdsec/acquis.d" "$FIXTURE_CASE/lib" \
-    "$FIXTURE_CASE/run" "$FIXTURE_CASE/state"
-  chmod 0755 "$FIXTURE_CASE/run"
-  printf '1\n' >"$FIXTURE_CASE/generation"
-  touch "$FIXTURE_CASE/run/crowdsec-retention.lock" "$FIXTURE_CASE/state/fence.lock"
-  chmod 0600 "$FIXTURE_CASE/run/crowdsec-retention.lock" "$FIXTURE_CASE/state/fence.lock"
-  cp "$FIXTURE_BUNDLE/host/crowdsec-schema-v1.8.2.tsv" "$FIXTURE_CASE/lib/"
-  cp "$FIXTURE_BUNDLE/host/crowdsec-retention.sh" "$FIXTURE_CASE/lib/"
-  cp "$work/database-fixture.sh" "$FIXTURE_CASE/"
-  sed -e "s|$work/host-placeholder|$FIXTURE_CASE/etc/postgresql/18/main|g" \
-    -e "s|$work/lib-placeholder|$FIXTURE_CASE/lib|g" \
-    -e "s|$work/state-placeholder|$FIXTURE_CASE/state|g" \
-    "$work/gate-template.sh" >"$FIXTURE_CASE/gate.sh"
-  sed "s|$work/run-placeholder|$FIXTURE_CASE/run|g" \
-    "$work/lease-template.sh" >"$FIXTURE_CASE/lease.sh"
-  bash "$work/$mode.sh"
-  python3 - "$FIXTURE_CASE" <<'PY'
+mode=ordinary
+export FIXTURE_CASE=$work/$mode FIXTURE_TICK=no FIXTURE_DRIFT=no
+export FIXTURE_LEASE_NOW=1577836801
+mkdir -p "$FIXTURE_CASE/etc/pgbackrest" "$FIXTURE_CASE/etc/postgresql/18/main" \
+  "$FIXTURE_CASE/etc/crowdsec/acquis.d" "$FIXTURE_CASE/lib" \
+  "$FIXTURE_CASE/run" "$FIXTURE_CASE/state"
+chmod 0755 "$FIXTURE_CASE/run"
+printf '1\n' >"$FIXTURE_CASE/generation"
+touch "$FIXTURE_CASE/run/crowdsec-retention.lock" "$FIXTURE_CASE/state/fence.lock"
+chmod 0600 "$FIXTURE_CASE/run/crowdsec-retention.lock" "$FIXTURE_CASE/state/fence.lock"
+cp "$FIXTURE_BUNDLE/host/crowdsec-schema-v1.8.2.tsv" "$FIXTURE_CASE/lib/"
+cp "$FIXTURE_BUNDLE/host/crowdsec-retention.sh" "$FIXTURE_CASE/lib/"
+cp "$work/database-fixture.sh" "$FIXTURE_CASE/"
+sed -e "s|$work/host-placeholder|$FIXTURE_CASE/etc/postgresql/18/main|g" \
+  -e "s|$work/lib-placeholder|$FIXTURE_CASE/lib|g" \
+  -e "s|$work/state-placeholder|$FIXTURE_CASE/state|g" \
+  "$work/gate-template.sh" >"$FIXTURE_CASE/gate.sh"
+sed "s|$work/run-placeholder|$FIXTURE_CASE/run|g" \
+  "$work/lease-template.sh" >"$FIXTURE_CASE/lease.sh"
+bash "$work/$mode.sh"
+python3 - "$FIXTURE_CASE" <<'PY'
 import os,pathlib,sys
 root=pathlib.Path(sys.argv[1])
 for tree in ('etc','lib'):
-    for path in (root/tree).rglob('*'):
-        if path.is_file(): os.utime(path,ns=(1577836800000000000,1577836800000000000))
+  for path in (root/tree).rglob('*'):
+      if path.is_file(): os.utime(path,ns=(1577836800000000000,1577836800000000000))
 (root/'loaded').write_text('1577836801\n')
 PY
-  snapshot save
-  export FIXTURE_TICK=yes
-  # shellcheck disable=SC1090
-  source "$FIXTURE_SUPPORT"
-  crowdsec_db_epoch=''
-  crowdsec_db_ready || fail 'initial database admission failed'
-  fixture_lease "$crowdsec_db_epoch"
-  admit initial || fail 'initial lease admission failed'
-  : >"$FIXTURE_CASE/reloads"
-  bash "$work/$mode.sh" || fail "$mode reinstall tripped authentication admission"
-  snapshot check
-  [[ ! -s $FIXTURE_CASE/job ]] || fail 'service job outlived installer lock'
-  [[ $(grep -Ec '^(reload|restart)$' "$FIXTURE_CASE/reloads" || true) == 0 ]] || fail 'unchanged reinstall changed PostgreSQL'
-  admit settled || fail 'lease admission failed after reinstall'
-  printf 'PASS %s-unchanged-files-keep-admission-and-metadata\n' "$mode"
+snapshot save
+export FIXTURE_TICK=yes
+# shellcheck disable=SC1090
+source "$FIXTURE_SUPPORT"
+crowdsec_db_epoch=''
+crowdsec_db_ready || fail 'initial database admission failed'
+fixture_lease "$crowdsec_db_epoch"
+admit initial || fail 'initial lease admission failed'
+: >"$FIXTURE_CASE/reloads"
+bash "$work/$mode.sh" || fail "$mode reinstall tripped authentication admission"
+snapshot check
+[[ ! -s $FIXTURE_CASE/job ]] || fail 'service job outlived installer lock'
+[[ $(grep -Ec '^(reload|restart)$' "$FIXTURE_CASE/reloads" || true) == 0 ]] || fail 'unchanged reinstall changed PostgreSQL'
+admit settled || fail 'lease admission failed after reinstall'
+printf 'PASS %s-unchanged-files-keep-admission-and-metadata\n' "$mode"
 
-  printf '42\n' >"$FIXTURE_CASE/job"
-  if crowdsec_db_process >/dev/null; then fail 'database process admitted a reload job'; fi
-  printf '42\n' >"$FIXTURE_CASE/job"
-  # shellcheck disable=SC1091
-  source "$FIXTURE_CASE/lease.sh"
-  if (crowdsec_lease_check); then fail 'lease admitted a reload job'; fi
-  : >"$FIXTURE_CASE/job"
-  admit calibrated || fail 'calibration did not restore lease admission'
+printf '42\n' >"$FIXTURE_CASE/job"
+if crowdsec_db_process >/dev/null; then fail 'database process admitted a reload job'; fi
+printf '42\n' >"$FIXTURE_CASE/job"
+# shellcheck disable=SC1091
+source "$FIXTURE_CASE/lease.sh"
+if (crowdsec_lease_check); then fail 'lease admitted a reload job'; fi
+: >"$FIXTURE_CASE/job"
+admit calibrated || fail 'calibration did not restore lease admission'
 
-  FIXTURE_LEASE_NOW=1577836800 crowdsec_lease_file || fail 'lease refused its creation time'
-  FIXTURE_LEASE_NOW=1577837160 crowdsec_lease_file || fail 'lease refused its maximum age'
-  if (FIXTURE_LEASE_NOW=1577837161 crowdsec_lease_file); then fail 'lease admitted an expired timestamp'; fi
-  if (FIXTURE_LEASE_NOW=1577836799 crowdsec_lease_file); then fail 'lease admitted a future timestamp'; fi
-  crowdsec_lease_file || fail 'lease clock calibration did not restore admission'
+FIXTURE_LEASE_NOW=1577836800 crowdsec_lease_file || fail 'lease refused its creation time'
+FIXTURE_LEASE_NOW=1577837160 crowdsec_lease_file || fail 'lease refused its maximum age'
+if (FIXTURE_LEASE_NOW=1577837161 crowdsec_lease_file); then fail 'lease admitted an expired timestamp'; fi
+if (FIXTURE_LEASE_NOW=1577836799 crowdsec_lease_file); then fail 'lease admitted a future timestamp'; fi
+crowdsec_lease_file || fail 'lease clock calibration did not restore admission'
 
-  export FIXTURE_TICK=yes FIXTURE_DRIFT=yes
-  for file in pg_hba.conf pg_ident.conf conf.d/90-aboutme.conf; do
-    for fault in content mode missing ownership; do
-      target=$FIXTURE_CASE/etc/postgresql/18/main/$file
-      case $fault in
-        content) printf '\n# fixture drift\n' >>"$target" ;;
-        mode) chmod 0600 "$target" ;;
-        missing) rm -- "$target" ;;
-        ownership)
-          ((EUID == 0)) || continue
-          chown 1:1 "$target"
-          ;;
-      esac
-      : >"$FIXTURE_CASE/reloads"
-      : >"$FIXTURE_CASE/blocked"
-      bash "$work/$mode.sh"
-      [[ ! -s $FIXTURE_CASE/job ]] || fail 'service job outlived installer lock'
-      [[ -s $FIXTURE_CASE/blocked ]] || fail 'watcher did not attempt admission during service job'
-      [[ $(grep -c "^reload$" "$FIXTURE_CASE/reloads") == 1 ]] || fail 'changed configuration missed service operation'
-      cmp "$FIXTURE_BUNDLE/host/etc/postgresql/18/main/$file" "$target"
-      python3 - "$target" "$FIXTURE_UID" "$FIXTURE_GID" <<'PY'
+export FIXTURE_TICK=yes FIXTURE_DRIFT=yes
+for file in pg_hba.conf pg_ident.conf conf.d/90-aboutme.conf; do
+  for fault in content mode missing ownership; do
+    target=$FIXTURE_CASE/etc/postgresql/18/main/$file
+    case $fault in
+      content) printf '\n# fixture drift\n' >>"$target" ;;
+      mode) chmod 0600 "$target" ;;
+      missing) rm -- "$target" ;;
+      ownership)
+        ((EUID == 0)) || continue
+        chown 1:1 "$target"
+        ;;
+    esac
+    : >"$FIXTURE_CASE/reloads"
+    : >"$FIXTURE_CASE/blocked"
+    bash "$work/$mode.sh"
+    [[ ! -s $FIXTURE_CASE/job ]] || fail 'service job outlived installer lock'
+    [[ -s $FIXTURE_CASE/blocked ]] || fail 'watcher did not attempt admission during service job'
+    [[ $(grep -c "^reload$" "$FIXTURE_CASE/reloads") == 1 ]] || fail 'changed configuration missed service operation'
+    cmp "$FIXTURE_BUNDLE/host/etc/postgresql/18/main/$file" "$target"
+    python3 - "$target" "$FIXTURE_UID" "$FIXTURE_GID" <<'PY'
 import os,stat,sys
 entry=os.lstat(sys.argv[1])
 mode=0o644 if sys.argv[1].endswith('90-aboutme.conf') else 0o640
 assert (entry.st_uid,entry.st_gid,stat.S_IMODE(entry.st_mode))==(int(sys.argv[2]),int(sys.argv[3]),mode)
 PY
-      admit repaired || fail "$mode $file $fault repair failed lease admission"
-    done
+    admit repaired || fail "$mode $file $fault repair failed lease admission"
   done
-  printf 'PASS %s-changed-files-settle-before-lease-admission\n' "$mode"
-  if [[ $mode == ordinary ]]; then
-    export FIXTURE_STUCK=yes
-    if bash "$work/$mode.sh"; then fail 'unsettled reload job returned success'; fi
-    [[ ! -e $FIXTURE_CASE/run/crowdsec-retention-ok &&
-      -s $FIXTURE_CASE/run/crowdsec-retention-failed &&
-      -s $FIXTURE_CASE/closed ]] || fail 'unsettled job did not revoke admission'
-    : >"$FIXTURE_CASE/job"
-    unset FIXTURE_STUCK
-    printf 'PASS unsettled-job-revokes-before-lock-release\n'
-  fi
 done
+printf 'PASS %s-changed-files-settle-before-lease-admission\n' "$mode"
+if [[ $mode == ordinary ]]; then
+  export FIXTURE_STUCK=yes
+  if bash "$work/$mode.sh"; then fail 'unsettled reload job returned success'; fi
+  [[ ! -e $FIXTURE_CASE/run/crowdsec-retention-ok &&
+    -s $FIXTURE_CASE/run/crowdsec-retention-failed &&
+    -s $FIXTURE_CASE/closed ]] || fail 'unsettled job did not revoke admission'
+  : >"$FIXTURE_CASE/job"
+  unset FIXTURE_STUCK
+  printf 'PASS unsettled-job-revokes-before-lock-release\n'
+fi

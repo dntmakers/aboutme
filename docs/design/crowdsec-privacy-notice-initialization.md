@@ -31,11 +31,10 @@ under the same recorded owner. Any present mismatch refuses.
 
 Both `initialize` on an app-absent host and first adoption establish this
 anchor. Adopted hosts never regenerate it, including when it is missing.
-Ordinary installation preserves it. Restore preserves the anchor and rotates
-`epoch` under the existing restore protocol; equality then fails permanently for
-this initial-only action. Even an empty restored database cannot qualify. Do not
-copy the anchor from backups, receipts, or another host. Losing it requires
-separately reviewed recovery, not another initialization.
+Ordinary installation and a cluster restore preserve it. Even an empty restored
+database cannot qualify. Do not copy the anchor from backups, receipts, or
+another host. Losing it requires separately reviewed recovery, not another
+initialization.
 
 ## Fixed initial action
 
@@ -184,8 +183,7 @@ Hosted regressions must exercise:
   crash at each replacement boundary, exact-operation resume, and new guards
   reaching only the verified helper.
 - New-host and adoption anchor creation; preservation on reinstall; missing,
-  unsafe, malformed, or mismatched anchors; initial/second restore rotations,
-  including empty restored tables and PostgreSQL-only hosts without an app.
+  unsafe, malformed, or mismatched anchors.
 - Zero accounts and ordinary mail; every campaign state, orphan recipients, and
   notice jobs in every state; missing schema, grants, lock contention, timeout,
   and commit failure without mutation or host clearance.

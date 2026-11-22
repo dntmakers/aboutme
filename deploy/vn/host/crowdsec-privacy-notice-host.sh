@@ -88,12 +88,9 @@ notice_revoke() {
   sync /var/lib/aboutme/privacy-notice
 }
 notice_epoch_rotate() {
-  local previous=${1:-} next
+  local next
   next=$(python3 -I -c 'import uuid; print(uuid.uuid4())') || return 1
-  [[ $next != "$previous" ]] || return 1
   printf '%s\n' "$next" | notice_replace epoch || return 1
-  # shellcheck disable=SC2034
-  notice_epoch=$next
 }
 notice_unit_stopped() {
   local result

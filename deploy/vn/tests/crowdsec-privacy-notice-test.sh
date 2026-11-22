@@ -14,11 +14,12 @@ grep -Fq 'authorize-send' "$wrapper" || fail 'explicit send authority action'; g
 grep -Fq 'publication_date' "$wrapper" || fail 'owner publication validation'; grep -Fq 'expected_count' "$wrapper" || fail 'owner aggregate validation'
 grep -Fq 'accepted_count' "$wrapper" || fail 'owner completion validation'; grep -Fq 'capture' "$wrapper" || fail 'owner capture interruption marker'
 grep -Fq 'adopt' "$primitive" || fail 'explicit legacy adoption action'; installer=$root/deploy/vn/host/install.sh
-awk '
-  /crowdsec-privacy-notice-host.sh/ && !helper {helper=NR}; /workload-lock.sh/ && !workload {workload=NR}
-  /fence.sh/ && !fence {fence=NR}
-  /if \[ "\$only" = postgres \]/ {postgres=NR}; END {exit !(helper && workload && fence && postgres && helper<postgres && workload<postgres && fence<postgres)}
-' "$installer" || fail 'postgres installer skipped shared dependencies'
+required_block=$(sed -n '/^for required in /,/; do$/p' "$installer")
+for name in host/crowdsec-privacy-notice-host.sh host/workload-lock.sh scripts/fence.sh; do
+  grep -qF "$name" <<<"$required_block" || fail "installer skipped $name"
+done
+[[ $(grep -n '^for required in ' "$installer" | head -n1 | cut -d: -f1) -lt $(grep -n '^apt-get install' "$installer" | head -n1 | cut -d: -f1) ]] ||
+  fail 'installer installs packages before its required helpers'
 work=$(mktemp -d /run/aboutme-notice-test.XXXXXX)
 stub() { local target=$1; { printf '#!/usr/bin/env bash\n'; cat; } >"$target"; chmod 0755 "$target"; }
 loops=()

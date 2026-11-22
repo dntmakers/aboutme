@@ -426,14 +426,12 @@ pg_order=$(awk '
   /^[[:space:]]*chown postgres:postgres \/srv\/data\/postgresql$/ { print path, "chown", FNR }
 ' "$installer")
 pg_step() { awk -v p="$pg_path" -v s="$1" '$1 == p && $2 == s { print $3 }' <<<"$pg_order"; }
-# shellcheck disable=SC2043
-for pg_path in full; do
-  pg_common=$(pg_step common) pg_chown=$(pg_step chown) pg_server=$(pg_step server)
-  [[ $pg_common =~ ^[0-9]+$ && $pg_chown =~ ^[0-9]+$ && $pg_server =~ ^[0-9]+$ ]] ||
-    fail "$pg_path path lost a PostgreSQL install step"
-  ((pg_common < pg_chown)) || fail "$pg_path path chowns the data directory before installing postgresql-common"
-  ((pg_chown < pg_server)) || fail "$pg_path path installs postgresql-18 before chowning the data directory"
-done
+pg_path=full
+pg_common=$(pg_step common) pg_chown=$(pg_step chown) pg_server=$(pg_step server)
+[[ $pg_common =~ ^[0-9]+$ && $pg_chown =~ ^[0-9]+$ && $pg_server =~ ^[0-9]+$ ]] ||
+  fail "$pg_path path lost a PostgreSQL install step"
+((pg_common < pg_chown)) || fail "$pg_path path chowns the data directory before installing postgresql-common"
+((pg_chown < pg_server)) || fail "$pg_path path installs postgresql-18 before chowning the data directory"
 pg_server_calls=$(grep -c '^[[:space:]]*install_pinned --no-install-recommends "postgresql-' "$installer" || true)
 [[ $pg_server_calls == 2 ]] || fail 'a PostgreSQL install_pinned call can pull in Recommends such as postgresql-18-jit'
 grep -qF -- '"${apt_flags[@]}"' "$installer" || fail 'install_pinned dropped the no-Recommends flag'
