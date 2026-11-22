@@ -71,13 +71,13 @@ export type DecodeResult
     | { readonly kind: 'invalid' };
 
 const DIGEST = /^sha256:[0-9a-f]{64}$/u;
-const VERSION = /^v[0-9]+\.[0-9]+\.[0-9]+$/u;
+const VERSION = /^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$/u;
 const COMMIT = /^[0-9a-f]{40}$/u;
 const TIMESTAMP = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/u;
 const REGION = /^[A-Z]{2,4}[0-9]{2}$/u;
 const OWNER = '(dannyota|dntmakers)';
 const REPO = `https://github\\.com/${OWNER}/aboutme`;
-const SEMVER = 'v[0-9]+\\.[0-9]+\\.[0-9]+';
+const SEMVER = 'v(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)';
 const SOURCE = new RegExp(`^${REPO}$`, 'u');
 const IMAGE = new RegExp(
   `^ghcr\\.io/${OWNER}/aboutme-(server|web|caddy)$`, 'u');

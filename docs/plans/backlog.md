@@ -15,9 +15,6 @@ Open items that outlived their shipped plans. One line each, with the evidence t
 
 - The photo panel's Retry button stays enabled while its resend is in flight; the queue ignores the repeat, so nothing is sent twice, but the control should be disabled like the held-write alert's (`apps/web/app/components/editor/photo/PhotoPanel.vue`).
 - History panel on phones: after a version read answers 404, focus drops to the page body because the focus request runs before the Edit tab shows (`apps/web/app/composables/useEditorHistory.ts`); a restore confirm blocked by unsaved work or a failed session check does nothing and the dialog gives no reason (`apps/web/app/editor/historyController.ts`). Move focus after the tab switch, and show the blocked reason.
-- The published ci-tools package still holds the `hashicorp/aws` provider zip and its `SHA256SUMS` line; the action and tests no longer pin it, and the old package keeps working. Drop the zip at the next ci-tools republish made for another reason.
-- The web deployment decoder's version pattern accepts leading zeros that `deploy/observer/schema/deployment.v1.json` rejects (`apps/web/app/utils/deploymentDocument.ts`). Use the schema's `(0|[1-9][0-9]*)` form.
-- Nothing validates `apps/web/e2e/fixtures/deployment/*.json` against `deploy/observer/schema/deployment.v1.json`, and `deploy/observer/README.md` and `AGENTS.md` wrongly say the frontend reads `testdata/examples/`. Add a schema check for the fixtures and correct the text.
 - Fold Dependabot pull requests #266, #273 (vitest 5, drop it if it breaks), #308, #309 and #310 and the open alerts with patches (`minimatch` in `pnpm-lock.yaml`; `go.opentelemetry.io/otel` in `deploy/caddy/production/build/go.mod`) into one dependency change, then close the pull requests. The `go-jose/v3` alerts in the Caddy build have no patch: check whether a newer Caddy drops it.
 
 ## Production acceptance

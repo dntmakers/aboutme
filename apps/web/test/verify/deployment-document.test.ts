@@ -1,4 +1,6 @@
-import { readFileSync } from 'node:fs';
+import Ajv2020 from 'ajv/dist/2020.js';
+import addFormats from 'ajv-formats';
+import { readFileSync, readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
@@ -57,6 +59,31 @@ function stateOf(name: string, now?: number): PageState {
 function clone(name: string): Loose {
   return structuredClone(raw(name)) as Loose;
 }
+
+describe('deployment fixtures', () => {
+  it('validates the fixtures against the version 1 schema', () => {
+    const schema = JSON.parse(readFileSync(resolve(import.meta.dirname,
+      '../../../../deploy/observer/schema/deployment.v1.json'), 'utf8'));
+    const ajv = addFormats(new Ajv2020({
+      allErrors: true, strictTypes: false,
+    }));
+    const validate = ajv.compile(schema);
+    const files = readdirSync(fixtureRoot)
+      .filter((name) => name.endsWith('.json'));
+    expect(files).not.toHaveLength(0);
+    for (const file of files) {
+      const value = JSON.parse(
+        readFileSync(resolve(fixtureRoot, file), 'utf8'),
+      );
+      if (file === 'outdated.json') {
+        expect(value.schema_version).toBe(2);
+        value.schema_version = 1;
+      }
+      expect(validate(value), `${file}: ${ajv.errorsText(validate.errors)}`)
+        .toBe(true);
+    }
+  });
+});
 
 describe('page state from each fixture', () => {
   it('keeps verified amd64 SBOM asset links', () => {
@@ -285,6 +312,34 @@ describe('closed decoding', () => {
       expect(decodeDeploymentDocument(raw(name)).kind).toBe('document');
     }
   });
+
+  it.each(['v01.2.3', 'v1.02.3', 'v1.2.03'])(
+    'rejects %s in every decoded version field', (version) => {
+      const changes: ((value: Loose) => void)[] = [
+        (value) => { value.release.version = version; },
+        (value) => { value.components[0].running_images[0].version = version; },
+        (value) => {
+          value.components[0].running_images[0].signature.signer_workflow
+            = 'https://github.com/dannyota/aboutme/.github/workflows/'
+              + `release-images.yml@refs/tags/${version}`;
+        },
+        (value) => {
+          value.components[0].running_images[0].links.release
+            = `https://github.com/dannyota/aboutme/releases/tag/${version}`;
+        },
+        (value) => {
+          value.components[0].running_images[0].links.sbom
+            = `https://github.com/dannyota/aboutme/releases/download/${version}/`
+              + 'aboutme-server-amd64.spdx.json';
+        },
+      ];
+      for (const change of changes) {
+        const value = clone('verified');
+        change(value);
+        expect(decodeDeploymentDocument(value)).toEqual({ kind: 'invalid' });
+      }
+    },
+  );
 
   it('ignores fields it does not know', () => {
     const value = clone('verified');
