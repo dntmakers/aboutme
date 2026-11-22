@@ -381,6 +381,8 @@ test_crowdsec_bouncer_error_log
 start_direct -e EDGES=direct -e DIRECT_HOST=vn.aboutme.vn \
   -e DIRECT_WWW_HOST= -e CROWDSEC_API_URL=http://127.0.0.1:8090 -e CROWDSEC_API_KEY="$bouncer_key"
 wait_direct 403 vn.aboutme.vn
+podman exec "$name" sh -c 'grep -q "api_url" /run/caddy/crowdsec.global && grep -qx crowdsec /run/caddy/crowdsec.handler' ||
+  { echo "serving: CrowdSec stream or handler missing" >&2; exit 1; }
 check_unprivileged "$name" "0050 01BB 1F90 1F9A" 0000000000000400
 if podman exec "$name" sh -c 'tr "\0" "\n" </proc/1/environ | grep -q "^CROWDSEC_API_KEY="'; then
   echo "CROWDSEC_API_KEY remains in the Caddy process environment" >&2
@@ -404,8 +406,11 @@ podman run --rm -e EDGES=direct -e DIRECT_HOST=vn.aboutme.vn -e DIRECT_WWW_HOST=
   -e CROWDSEC_API_URL=http://127.0.0.1:8090/ -e CROWDSEC_API_KEY=x "$image" adapt ||
   { echo "adapt failed for EDGES=direct with a rehearsal host and CrowdSec" >&2; exit 1; }
 
-start_direct -e EDGES=direct -e MAINTENANCE=1
+start_direct -e EDGES=direct -e MAINTENANCE=1 -e CROWDSEC_API_URL=http://127.0.0.1:8090/ \
+  -e CROWDSEC_API_KEY_FILE=/run/secrets/crowdsec-bouncer-key -v "$work/bouncer.key:/run/secrets/crowdsec-bouncer-key:ro"
 wait_direct 503
+podman exec "$name" sh -c 'test ! -s /run/caddy/crowdsec.global && test ! -s /run/caddy/crowdsec.handler' ||
+  { echo "maintenance: CrowdSec stream or handler configured" >&2; exit 1; }
 
 maint() {
   curl -s -m 10 -o "$work/maint.body" -D "$work/maint.headers" \

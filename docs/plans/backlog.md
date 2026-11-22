@@ -14,7 +14,6 @@ Open items that outlived their shipped plans. One line each, with the evidence t
 ## Production acceptance
 
 - Dispatch the first `action=renew` of `.github/workflows/vmonitor-renew.yml` from 2026-11-24T06:54:54Z (the 7-day threshold for the term ending 2026-12-01T06:54:54Z) and confirm the later expiry by read-back; then add the schedule in a separate reviewed change. `action=check` passed on 2026-11-01 (run 41302010198) and the owner delegated closing hold issue #146, which is now closed. If the renewal fails or stays unconfirmed, reconcile with the provider before any retry. Evidence: [renewal design](../design/vmonitor-quota-renewal.md).
-- Serving and maintenance Caddy share one bouncer key and so one LAPI stream cursor (`Secret=crowdsec-bouncer-key` in both `deploy/vn/host/quadlet/aboutme-caddy.container.in:16` and `aboutme-maintenance.container.in:16`). A maintenance edge that pulls the stream can advance the cursor the serving edge depends on. Give each edge its own bouncer, or prove the shared cursor is safe across edge switches.
 
 ## Vietnam production
 
