@@ -16,7 +16,7 @@ These packages belong to the root `go.mod` module as `danny.vn/aboutme/deploy/ob
 
 ## Sources and outputs
 
-Root reporter input flows through platform aggregation, signature verification, the schema-bound report builder, and atomic publication of `deployment.json`. `Dockerfile` builds the independent binary image. `internal/document/examples_test.go` generates the golden `testdata/examples/` documents used by the frontend; briefs must name affected consumers and example output.
+Root reporter input flows through platform aggregation, signature verification, the schema-bound report builder, and atomic publication of `deployment.json`. `Dockerfile` builds the independent binary image. `internal/document/examples_test.go` generates golden `testdata/examples/` documents; frontend tests use separate fixtures in `apps/web/e2e/fixtures/deployment/`. Briefs must name affected consumers and example output.
 
 ## Authorities and checks
 

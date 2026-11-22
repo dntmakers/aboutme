@@ -10,9 +10,6 @@ Open items that outlived their shipped plans. One line each, with the evidence t
 
 - [Local tooling](../design/local-tooling-simplification.md#owner-choices-and-combined-jobs), accepted 2026-11-01, is partly built: display assertions have landed, while portable sessions, the wrapper and lock changes (`instructions/resources.md` still gives the interim command), strict native Mac HTTPS, and the `server-runtime-smoke` CI job (absent from `.github/workflows/ci.yml`) are pending. Preserve exact-commit release CI.
 
-- The published ci-tools package still holds the `hashicorp/aws` provider zip and its `SHA256SUMS` line; the action and tests no longer pin it, and the old package keeps working. Drop the zip at the next ci-tools republish made for another reason.
-- The web deployment decoder's version pattern accepts leading zeros that `deploy/observer/schema/deployment.v1.json` rejects (`apps/web/app/utils/deploymentDocument.ts`). Use the schema's `(0|[1-9][0-9]*)` form.
-- Nothing validates `apps/web/e2e/fixtures/deployment/*.json` against `deploy/observer/schema/deployment.v1.json`, and `deploy/observer/README.md` and `AGENTS.md` wrongly say the frontend reads `testdata/examples/`. Add a schema check for the fixtures and correct the text.
 - Fold Dependabot pull requests #266, #273 (vitest 5, drop it if it breaks), #308, #309 and #310 and the open alerts with patches (`minimatch` in `pnpm-lock.yaml`; `go.opentelemetry.io/otel` in `deploy/caddy/production/build/go.mod`) into one dependency change, then close the pull requests. The `go-jose/v3` alerts in the Caddy build have no patch: check whether a newer Caddy drops it.
 
 ## Production acceptance
