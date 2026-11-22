@@ -2200,9 +2200,9 @@ chmod 700 "$work"
 export GOBIN="$work/bin" GOPATH="$work/gopath" GOMODCACHE="$work/mod" GOCACHE="$work/cache"
 export GOTOOLCHAIN=local GOSUMDB=sum.golang.org GOPRIVATE='' GONOSUMDB='' GOINSECURE=''
 mkdir -p "$GOBIN" "$GOPATH" "$GOMODCACHE" "$GOCACHE"
-go install danny.vn/vngcloud/cmd/vngcloud@v0.89.0
+go install danny.vn/vngcloud/cmd/vngcloud@v0.99.0
 identity=$(go version -m "$GOBIN/vngcloud" | awk '$1 == "mod" { print $2, $3, $4 }')
-[ "$identity" = 'danny.vn/vngcloud v0.89.0 h1:o9YirnefFhEqpEJtalX41uHci6PR6P4AcotwPrWiqkA=' ]
+[ "$identity" = 'danny.vn/vngcloud v0.99.0 h1:ViCsFZzuhJo1vdibA8u56TNwGTUJ0Tm7BcIwuVmpuzs=' ]
 printf '%s\\n' "$GOBIN" >> "$GITHUB_PATH"
 `;
 
