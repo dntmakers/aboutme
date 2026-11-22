@@ -27,6 +27,7 @@ type Options struct {
 
 type PublicRoutes interface {
 	Recognizes(escapedPath string) bool
+	RouteClass(escapedPath string) string
 	ServeHTTP(http.ResponseWriter, *http.Request)
 }
 
@@ -74,6 +75,7 @@ func New(logger *slog.Logger, pinger DBPinger, opts Options, public PublicRoutes
 			return
 		}
 		if public != nil && public.Recognizes(r.URL.EscapedPath()) {
+			SetLogRoute(r.Context(), public.RouteClass(r.URL.EscapedPath()))
 			public.ServeHTTP(w, r)
 			return
 		}

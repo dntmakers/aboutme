@@ -51,6 +51,10 @@ func RequireSession(m *SessionManager) api.Middleware {
 					rejectSession(w)
 					return
 				}
+				if errors.Is(err, context.Canceled) && errors.Is(r.Context().Err(), context.Canceled) {
+					w.WriteHeader(statusClientClosedRequest)
+					return
+				}
 				api.WriteError(w, http.StatusInternalServerError, "internal_error", "an internal error occurred")
 				return
 			}
