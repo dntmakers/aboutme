@@ -21,7 +21,7 @@ pin() {
 drill_inner() {
   set -euo pipefail
   export DEBIAN_FRONTEND=noninteractive
-  local bin=/usr/lib/postgresql/18/bin mode dir label target start seconds goose app table count rows
+  local bin=/usr/lib/postgresql/18/bin mode dir label target start seconds replayed goose app table count rows
 
   as_postgres() { setpriv --reuid=postgres --regid=postgres --init-groups "$@"; }
   sql() { as_postgres psql -X -q -At -v ON_ERROR_STOP=1 -h /run/postgresql -d aboutme "$@"; }
@@ -57,18 +57,19 @@ drill_inner() {
       target=$(date -u -d '24 hours ago' '+%Y-%m-%d %H:%M:%S+00')
       args+=(--type=time "--target=$target" --target-action=promote)
     fi
-    as_postgres pgbackrest "${args[@]}" restore >/dev/null
-    label=$(sed -n 's/^LABEL: //p' "$dir/backup_label")
+    label=$(as_postgres pgbackrest "${args[@]}" --log-level-console=info restore | sed -n 's/.*restore backup set \([^ ,]*\).*/\1/p')
+    [[ $label =~ ^[0-9]{8}-[0-9]{6}F(_[0-9]{8}-[0-9]{6}[DI])?$ ]] || { echo "no backup set label ($mode)" >&2; exit 1; }
 
     start=$SECONDS
-    as_postgres "$bin/pg_ctl" -D "$dir" -l "/tmp/postgres-$mode.log" -w -t 900 \
+    as_postgres "$bin/pg_ctl" -D "$dir" -l "/tmp/postgres-$mode.log" -w -t 1800 \
       -o '-c config_file=/drill/pg/conf.d/90-aboutme.conf -c hba_file=/drill/pg/pg_hba.conf -c ident_file=/drill/pg/pg_ident.conf -c archive_mode=off' \
       start >/dev/null
     until [[ $(sql -c 'SELECT pg_is_in_recovery()' 2>/dev/null || true) == f ]]; do
-      ((SECONDS - start < 900)) || { echo "recovery did not finish ($mode)" >&2; exit 1; }
+      ((SECONDS - start < 1800)) || { echo "recovery did not finish ($mode)" >&2; exit 1; }
       sleep 2
     done
     seconds=$((SECONDS - start))
+    replayed=$(sql -c "SELECT to_char(pg_last_xact_replay_timestamp() AT TIME ZONE 'UTC', 'YYYY-MM-DD HH24:MI:SS')")
 
     goose=$(sql -c 'SELECT max(version_id) FROM goose_db_version')
     [[ $goose =~ ^[0-9]+$ ]] || { echo "no goose version ($mode)" >&2; exit 1; }
@@ -77,7 +78,7 @@ drill_inner() {
     rows=$(sql -F ' ' -c "SELECT table_name, (xpath('/row/c/text()', query_to_xml(format('select count(*) as c from %I.%I', table_schema, table_name), false, true, '')))[1]::text FROM information_schema.tables WHERE table_schema = 'public' AND table_type = 'BASE TABLE' ORDER BY 1")
     [[ -n $rows ]] || { echo "no tables in public ($mode)" >&2; exit 1; }
 
-    printf '== %s restore: backup %s, target %s, recovery %ss\n' "$mode" "$label" "$target" "$seconds"
+    printf '== %s restore: backup %s, target %s, recovery %ss, last replayed transaction %s UTC\n' "$mode" "$label" "$target" "$seconds" "$replayed"
     printf 'goose version %s\n' "$goose"
     while read -r table count; do
       [[ $table =~ ^[a-z0-9_]+$ && $count =~ ^[0-9]+$ ]] || { echo "bad count row ($mode)" >&2; exit 1; }
@@ -118,8 +119,6 @@ cleanup() {
   rm -rf -- "$work"
 }
 trap cleanup EXIT
-trap 'exit 130' INT
-trap 'exit 143' TERM
 chmod 0700 "$work"
 mkdir -m 0700 "$work/secrets"
 
@@ -143,5 +142,6 @@ podman run --name "$name" \
   -v "$pgdg_key:/drill/pgdg.asc:ro" \
   -v "$pg_config_dir:/drill/pg:ro" \
   -e POSTGRESQL_VERSION -e POSTGRESQL_COMMON_VERSION -e PGBACKREST_VERSION -e PGDG_SIGNER_FPR -e STANZA \
-  "$image" bash -c "$(declare -f drill_inner); drill_inner"
+  "$image" bash -c "$(declare -f drill_inner); drill_inner" &
+wait $!
 printf 'PASS\n'

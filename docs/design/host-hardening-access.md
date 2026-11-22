@@ -75,7 +75,7 @@ Port secrecy is not authentication; history retains earlier disclosures.
 
 Literal/default search found these locations; values are intentionally omitted:
 
-- `V/prod/variables.tf:68,76,82,83,86,87`; `V/prod/main.tf:47,126,127`;
+- `V/prod/variables.tf:68,76,82,83,86,87`; `V/prod/main.tf:47`;
   `V/prod/prod.tfvars.example:2,3`.
 - `V/README.md:68,73,74`; `V/scripts/ssh-lib.sh:2`; `V/probe/probe.sh:8`;
   `V/probe/README.md:14,15,46`.

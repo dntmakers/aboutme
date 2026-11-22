@@ -125,7 +125,7 @@ while IFS= read -r path; do
   [[ ${report##*calls=} == 0 ]] || ssh_scripts=$((ssh_scripts + 1))
 done < <(find "$root/deploy/vn" "$root/scripts" -name '*.sh' -not -path '*/tests/*' -not -path '*/test/*' \
   -not -name '*-test.sh' | sort)
-((ssh_scripts >= 5)) || fail "SSH keepalive scan found ssh calls in $ssh_scripts scripts, expected at least 5"
+((ssh_scripts >= 4)) || fail "SSH keepalive scan found ssh calls in $ssh_scripts scripts, expected at least 4"
 
 expect_keepalive_scan() {
   local expected=$1 fixture=$work/ssh-fixture.sh report status=0

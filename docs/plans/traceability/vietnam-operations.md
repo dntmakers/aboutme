@@ -65,7 +65,7 @@ The owner confirmed on 2026-10-13, from building the `vngcloud` CLI, that a Gree
 
 Record each laptop restore drill here with its date, backup label, recovery times, and pass or fail.
 
-- 2026-11-22: pass. Latest set `20261116-000306F_20261122-000808D`, recovery 513 s, goose 22; point-in-time 2026-11-21 07:15:18 UTC, recovery 32 s, goose 21. 79 public tables counted in each; `aboutme_app` read passed.
+- 2026-11-22: pass. Latest backup, recovery 513 s, goose 22; point-in-time 2026-11-21 07:15:18 UTC, recovery 32 s, goose 21. 79 public tables counted in each; `aboutme_app` read passed.
 
 ## Supporting host metadata
 
