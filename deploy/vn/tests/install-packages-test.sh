@@ -439,7 +439,7 @@ pg_server_calls=$(grep -c '^[[:space:]]*install_pinned --no-install-recommends "
 [[ $pg_server_calls == 4 ]] || fail 'a PostgreSQL install_pinned call can pull in Recommends such as postgresql-18-jit'
 grep -qF -- '"${apt_flags[@]}"' "$installer" || fail 'install_pinned dropped the no-Recommends flag'
 printf 'PASS postgresql-installs-skip-recommends\n'
-grep -qF 'https://apt-archive.postgresql.org/pub/repos/apt noble-pgdg-archive main' "$installer" ||
+grep -qE '^echo "deb \[signed-by=/etc/apt/keyrings/postgresql\.asc\] https://apt-archive\.postgresql\.org/pub/repos/apt noble-pgdg-archive main"' "$installer" ||
   fail 'installer lacks the PGDG archive source for pinned versions'
 printf 'PASS installer-adds-pgdg-archive-source\n'
 
@@ -447,13 +447,16 @@ printf 'PASS postgresql-data-directory-chown-runs-between-common-and-server-inst
 
 pg_server_version=$(sed -n 's/^POSTGRESQL_VERSION=//p' "$installer")
 [[ -n $pg_server_version ]] || fail 'postgresql-18 pin missing'
+pg_backrest_version=$(sed -n 's/^PGBACKREST_VERSION=//p' "$installer")
+[[ -n $pg_backrest_version ]] || fail 'pgbackrest pin missing'
 pg_offline=${2:-$root/deploy/vn/tests/crowdsec-offline-test.sh}
 pg_proof=$(awk '
   /^pinned_postgresql=[(]/ { copy = 1; sub(/^pinned_postgresql=[(]/, "") }
   copy { closed = sub(/[)].*/, ""); print; if (closed) exit }
 ' "$pg_offline" | tr -s ' \t' '\n\n' | sed '/^$/d' | sort)
 pg_expected=$(printf '%s\n' "postgresql-common=$pg_version" "postgresql-client-common=$pg_version" \
-  "postgresql-18=$pg_server_version" "postgresql-client-18=$pg_server_version" | sort)
+  "postgresql-18=$pg_server_version" "postgresql-client-18=$pg_server_version" \
+  "libpq5=$pg_server_version" "pgbackrest=$pg_backrest_version" | sort)
 [[ $pg_proof == "$pg_expected" ]] || fail 'CrowdSec package proof pins PostgreSQL off the installer pins'
 printf 'PASS crowdsec-package-proof-pins-postgresql-at-installer-versions\n'
 
@@ -466,7 +469,7 @@ collect_tokens=$(awk '
   copy { more = sub(/\\$/, ""); print; if (!more) exit }
 ' "$collect" | tr -s ' \t' '\n\n')
 collect_pins() { { grep -E "^($1)(=|\$)" <<<"$collect_tokens" || true; } | sort; }
-[[ $(collect_pins 'postgresql-common|postgresql-client-common|postgresql-18|postgresql-client-18') == "$pg_expected" ]] ||
+[[ $(collect_pins 'postgresql-common|postgresql-client-common|postgresql-18|postgresql-client-18|libpq5|pgbackrest') == "$pg_expected" ]] ||
   fail 'CI package collection pins PostgreSQL off the installer pins'
 crowdsec_expected=$(printf '%s\n' "crowdsec=$crowdsec_version" \
   "crowdsec-firewall-bouncer-nftables=$bouncer_version" | sort)

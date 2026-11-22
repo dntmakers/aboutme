@@ -322,7 +322,7 @@ if [[ -e /etc/aboutme/alert-transport || -L /etc/aboutme/alert-transport ]]; the
     $(</etc/aboutme/alert-transport) == telegram ]] || die "unsafe alert transport"
   alert_packages=()
 fi
-apt-get install -y -qq ca-certificates curl gnupg age "${alert_packages[@]}" python3-yaml catatonit openssl >/dev/null
+apt-get install -y -qq ca-certificates curl gnupg age logrotate "${alert_packages[@]}" python3-yaml catatonit openssl >/dev/null
 
 install_key "$bundle/host/keys/pgdg.asc" "$PGDG_SIGNER_FPR" /etc/apt/keyrings/postgresql.asc
 echo "deb [signed-by=/etc/apt/keyrings/postgresql.asc] https://apt.postgresql.org/pub/repos/apt noble-pgdg main" \
