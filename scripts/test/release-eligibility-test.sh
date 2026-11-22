@@ -18,10 +18,10 @@ write_jobs=$(awk '
   /^  [a-z][a-z0-9_-]*:$/ { job=$1; sub(/:$/, "", job) }
   /^      [a-z-]+: write$/ { print job }
 ' "$root/.github/workflows/release-images.yml" | sort -u)
-[[ $write_jobs == $'build\nimage\nobserver-image\nobserver-image-amd64\nrelease' ]] ||
+[[ $write_jobs == $'build\nimage\nobserver-image-amd64\nrelease' ]] ||
   fail 'write-capable jobs changed without eligibility coverage'
 
-for job in build observer-image observer-image-amd64; do
+for job in build observer-image-amd64; do
   body=$(job_body "$job")
   grep -Fxq '    needs: [eligibility, trivy-db]' <<<"$body" || fail "$job can start before eligibility"
   ! grep -Eq '^    (if:|continue-on-error:)' <<<"$body" || fail "$job overrides dependency success"
@@ -32,7 +32,7 @@ grep -Fxq "    if: github.event_name == 'push'" <<<"$body" || fail 'image bypass
 body=$(job_body release)
 grep -Fxq "    if: \${{ !cancelled() && needs.image.result == 'success' }}" <<<"$body" ||
   fail 'release must require image success'
-grep -Fxq '    needs: [image, observer-image, observer-image-amd64]' <<<"$body" ||
+grep -Fxq '    needs: [image, observer-image-amd64]' <<<"$body" ||
   fail 'release must wait for image and collect observer evidence'
 body=$(job_body trivy-db)
 [[ -n $body ]] || fail 'missing trivy-db job'

@@ -2,7 +2,7 @@
 set -eu
 umask 077
 fail() { echo "aboutme-caddy: $*" >&2; exit 1; }
-edges=${EDGES-cloudfront}
+edges=${EDGES-}
 case ",$edges," in
   *[!a-z,]* | *,,*) fail "malformed EDGES '$edges'" ;;
 esac
@@ -12,7 +12,7 @@ mkdir -p /run/caddy
 seen=,
 for edge in $(printf '%s' "$edges" | tr ',' ' '); do
   case $edge in
-    cloudfront | direct) ;;
+    direct) ;;
     *) fail "unknown edge '$edge'" ;;
   esac
   case $seen in
@@ -92,13 +92,8 @@ EOF
 }
 
 write_default_log_excludes() {
-  case $seen in
-    *,direct,*)
-      printf 'exclude http.handlers.waf crowdsec http.handlers.crowdsec http.log.error.crowdsec_serving http.log.error.crowdsec_maintenance http.stdlib http.log.access tls\n' \
-        > /run/caddy/default-log-excludes.caddy ;;
-    *)
-      printf 'exclude http.handlers.waf\n' > /run/caddy/default-log-excludes.caddy ;;
-  esac
+  printf 'exclude http.handlers.waf crowdsec http.handlers.crowdsec http.log.error.crowdsec_serving http.log.error.crowdsec_maintenance http.stdlib http.log.access tls\n' \
+    > /run/caddy/default-log-excludes.caddy
 }
 
 crowdsec_url=${CROWDSEC_API_URL-}
@@ -118,13 +113,6 @@ case $seen in
       printf 'https://%s {\n\timport direct_tls\n\timport direct_response_headers\n\tredir https://%s{uri} permanent\n}\n' \
         "$www" "$DIRECT_HOST" >>/run/caddy/direct-www.sites
     fi
-    # Caddy picks a TLS certificate by server name (Caddy automatic HTTPS docs).
-    case $seen in
-      *,cloudfront,*)
-        case " $DIRECT_HOST $www " in
-          *" aboutme.vn "* | *" www.aboutme.vn "*) fail "with the cloudfront edge, the direct hosts must not be aboutme.vn or www.aboutme.vn" ;;
-        esac ;;
-    esac
     case ${DIRECT_TLS-acme} in
       acme) printf 'tls {\n\tissuer acme\n}\n' >/run/caddy/direct-tls.caddy ;;
       internal) printf 'tls internal\n' >/run/caddy/direct-tls.caddy ;;
@@ -153,11 +141,6 @@ case $seen in
       printf 'crowdsec\n' >/run/caddy/crowdsec.handler
     fi
     ;;
-  *)
-    if [ -n "$crowdsec_url" ] || [ -n "$crowdsec_key_file" ] || [ -n "$crowdsec_key_set" ]; then
-      fail "CrowdSec settings need the direct edge"
-    fi
-    ;;
 esac
 unset CROWDSEC_API_KEY
 write_default_log_excludes
@@ -172,14 +155,6 @@ if [ "${1:-}" = adapt ]; then
   exit 0
 fi
 
-case $seen in
-  *,cloudfront,*)
-    : "${ORIGIN_CERT:?}" "${ORIGIN_KEY:?}" "${CLOUDFRONT_CLIENT_CA:?}"
-    printf '%s\n' "$ORIGIN_CERT" >/run/caddy/origin.pem
-    printf '%s\n' "$ORIGIN_KEY" >/run/caddy/origin-key.pem
-    printf '%s\n' "$CLOUDFRONT_CLIENT_CA" >/run/caddy/cloudfront-ca.pem ;;
-esac
-unset ORIGIN_KEY
 config=/etc/caddy/Caddyfile
 log_owner=serving
 if [ "${MAINTENANCE:-0}" = 1 ]; then

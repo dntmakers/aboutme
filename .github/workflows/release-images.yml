@@ -258,96 +258,6 @@ jobs:
           path: index-${{ matrix.name }}.txt
           if-no-files-found: error
 
-  observer-image:
-    name: Release observer (arm64)
-    needs: [eligibility, trivy-db]
-    runs-on: ubuntu-24.04-arm
-    timeout-minutes: 20
-    permissions:
-      actions: read
-      contents: read
-      packages: write
-      id-token: write
-      attestations: write
-    env:
-      IMAGE: ghcr.io/${{ github.repository_owner }}/aboutme-observer:${{ github.ref_name }}
-      NAME: observer
-      ARCH: arm64
-      MACHINE: aarch64
-      DOCKERFILE: deploy/observer/Dockerfile
-      VERSION: ${{ github.ref_name }}
-      COMMIT: ${{ github.sha }}
-      OWNER: ${{ github.repository_owner }}
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          repository: ${{ github.repository }}
-          ref: refs/heads/main
-          path: .release-trusted
-          fetch-depth: 0
-          persist-credentials: false
-      - name: Check release eligibility
-        if: github.event_name == 'push'
-        env:
-          TAG: ${{ github.ref_name }}
-          COMMIT: ${{ github.sha }}
-          OWNER: ${{ github.repository_owner }}
-          GH_TOKEN: ${{ github.token }}
-        run: bash .release-trusted/scripts/release-eligibility.sh "$TAG" "$COMMIT" "$OWNER"
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: ./.github/actions/release-image-check
-        with:
-          report-name: observer
-      - name: Push
-        if: github.event_name == 'push'
-        id: push
-        env:
-          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          ACTOR: ${{ github.actor }}
-        run: |
-          printf '%s' "$GHCR_TOKEN" | docker login ghcr.io -u "$ACTOR" --password-stdin
-          docker push "$IMAGE"
-          digest=$(docker inspect --format '{{index .RepoDigests 0}}' "$IMAGE" | cut -d@ -f2)
-          echo "digest=$digest" >>"$GITHUB_OUTPUT"
-          echo "observer=$digest" >digest-observer.txt
-          echo "observer=$digest" >>"$GITHUB_STEP_SUMMARY"
-      - if: github.event_name == 'push'
-        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
-        with:
-          subject-name: ghcr.io/${{ github.repository_owner }}/aboutme-observer
-          subject-digest: ${{ steps.push.outputs.digest }}
-          push-to-registry: true
-          create-storage-record: false
-      - name: SBOM
-        if: github.event_name == 'push'
-        env:
-          DIGEST: ${{ steps.push.outputs.digest }}
-          OWNER: ${{ github.repository_owner }}
-        run: |
-          "$RUNNER_TEMP/trivy-bin/trivy" --cache-dir "$RUNNER_TEMP/trivy-cache" image --skip-db-update --format spdx-json \
-            --output aboutme-observer.spdx.json "ghcr.io/$OWNER/aboutme-observer@$DIGEST"
-          jq -e '.spdxVersion == "SPDX-2.3"' aboutme-observer.spdx.json >/dev/null
-      - if: github.event_name == 'push'
-        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
-        with:
-          subject-name: ghcr.io/${{ github.repository_owner }}/aboutme-observer
-          subject-digest: ${{ steps.push.outputs.digest }}
-          sbom-path: aboutme-observer.spdx.json
-          push-to-registry: true
-          create-storage-record: false
-      - if: github.event_name == 'push'
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: digest-observer
-          path: digest-observer.txt
-          if-no-files-found: error
-      - if: github.event_name == 'push'
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: sbom-observer
-          path: aboutme-observer.spdx.json
-          if-no-files-found: error
-
   observer-image-amd64:
     name: Release observer (amd64)
     needs: [eligibility, trivy-db]
@@ -440,7 +350,7 @@ jobs:
 
   release:
     name: Publish release
-    needs: [image, observer-image, observer-image-amd64]
+    needs: [image, observer-image-amd64]
     if: ${{ !cancelled() && needs.image.result == 'success' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 10
@@ -451,7 +361,6 @@ jobs:
       TAG: ${{ github.ref_name }}
       GH_TOKEN: ${{ github.token }}
       GH_REPO: ${{ github.repository }}
-      OBSERVER_ARM_RESULT: ${{ needs['observer-image'].result }}
       OBSERVER_AMD_RESULT: ${{ needs['observer-image-amd64'].result }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -508,36 +417,20 @@ jobs:
               jq -e '.spdxVersion == "SPDX-2.3"' "artifacts/aboutme-$name-$arch.spdx.json" >/dev/null
               cp "artifacts/aboutme-$name-$arch.spdx.json" release/
             done
-            cp "artifacts/aboutme-$name-arm64.spdx.json" "release/aboutme-$name.spdx.json"
           done
-          names=()
-          if [ "$OBSERVER_ARM_RESULT" = success ] &&
-            [ -e artifacts/digest-observer.txt ] &&
-            [ -e artifacts/aboutme-observer.spdx.json ]; then
-            names+=(observer)
-          fi
           if [ "$OBSERVER_AMD_RESULT" = success ] &&
             [ -e artifacts/digest-observer-amd64.txt ] &&
             [ -e artifacts/aboutme-observer-amd64.spdx.json ]; then
-            names+=(observer-amd64)
+            d=$(read_digest artifacts/digest-observer-amd64.txt observer-amd64)
+            echo "ghcr.io/$OWNER/aboutme-observer@$d linux/amd64" >>release/digests.txt
+            jq -e '.spdxVersion == "SPDX-2.3"' artifacts/aboutme-observer-amd64.spdx.json >/dev/null
+            cp artifacts/aboutme-observer-amd64.spdx.json release/
           fi
-          for name in "${names[@]}"; do
-            d=$(read_digest "artifacts/digest-$name.txt" "$name")
-            arch=arm64
-            if [ "$name" = observer-amd64 ]; then
-              arch=amd64
-            fi
-            echo "ghcr.io/$OWNER/aboutme-observer@$d linux/$arch" >>release/digests.txt
-            jq -e '.spdxVersion == "SPDX-2.3"' "artifacts/aboutme-$name.spdx.json" >/dev/null
-            cp "artifacts/aboutme-$name.spdx.json" release/
-          done
           cat >release/notes.md <<EOF
           Images built from $TAG by the release-images workflow. \`digests.txt\`
           lists each image by digest with the platforms it serves: the
           multi-platform index, then one image per platform. Files with a
-          platform suffix are copies of signed SPDX 2.3 SBOMs. The app files
-          without a platform suffix are copies of the arm64 SBOMs for existing
-          AWS transparency links.
+          platform suffix are copies of signed SPDX 2.3 SBOMs.
 
           Verify an image's build provenance with the GitHub CLI:
 

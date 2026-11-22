@@ -67,13 +67,7 @@ resume response gains the switch.
 Production uses the direct Caddy edge on the
 [Vietnam host](../vietnam-production.md#edge), with Cloudflare DNS-only. Public
 pages and every new route pass through without an edge cache. The gate is
-`no-store`. Caddy strips every `x-amzn-*` header, so layers 2 and 3 are off; the
-other counting layers apply.
-
-The Caddy CloudFront listener passes `x-amzn-waf-aboutme-bot` and
-`x-amzn-waf-aboutme-dc` to Go and removes every other `x-amzn-waf-*` header;
-every other listener strips both. Go reads them only from its trusted proxy and
-only as exactly one value `1`.
+`no-store`. Caddy strips every `x-amzn-*` header.
 
 ## Rate limits
 
@@ -96,16 +90,8 @@ closed; when the buffer is full, the outcome is dropped and logged.
 
 ## Cost
 
-| Item                                          | USD per month                                                              |
-| --------------------------------------------- | -------------------------------------------------------------------------- |
-| Bot Control subscription                      | 10 ([WAF pricing][waf-price])                                              |
-| Bot Control and Anonymous IP list rule groups | 2 (1 each; **Verify** on the bill for Bot Control)                         |
-| Two label rules                               | 2                                                                          |
-| Bot Control requests                          | 0 inside 10 million inspected a month; then 1 per million collect requests |
-| WAF requests                                  | 0.60 per million, as today                                                 |
-| CloudFront requests                           | 2 more per page view; inside the free 10 million a month                   |
-| Database and compute                          | No change at this size                                                     |
-| **Total**                                     | **about 14 to 15**                                                         |
+Counting adds no recurring cost beyond database and compute, which do not change
+at this size.
 
 ## Security
 
@@ -166,8 +152,7 @@ Tests cite this design, ADR 0022, or `AC-*` IDs.
   later, the gate and the join invite in both languages.
 - Browser proofs: the dev-https public check gains the gate sign-in through the
   mock provider with sign in to view.
-- Infrastructure: WAF rules are Count only with the scope-down; Caddy passes the
-  two headers on the CloudFront listener and strips every other `x-amzn-waf-*`.
+- Infrastructure: Caddy strips every `x-amzn-*` header.
 
 ## Live checks
 
@@ -192,5 +177,3 @@ After each deploy, on a fictional published resume, evidence under
    invite keeps it closed on reload; no row or log line names the viewer;
    turning the switch off serves the resume publicly at once; a
    `deploy.sh --rollback` below the release is refused.
-
-[waf-price]: https://aws.amazon.com/waf/pricing/

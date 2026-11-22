@@ -129,10 +129,10 @@ Installation creates the root reporter's observation directory and the
 observer-owned public directory, enables `aboutme-deployment-document.timer`,
 and installs the observer Quadlet template. A release with
 `aboutme-observer:<tag>-amd64` starts or restarts `aboutme-observer.service`
-after checking its provenance and single `linux/amd64` manifest. No deployment
-uses the plain observer version tag, an arm64 image. The observer stays up
-during maintenance. Deploys and rollbacks without that image keep the installed
-observer unit. See the [observer runbook](../../docs/runbooks/observer.md).
+after checking its provenance and single `linux/amd64` manifest. The observer
+stays up during maintenance. Deploys and rollbacks without that image keep the
+installed observer unit. See the
+[observer runbook](../../docs/runbooks/observer.md).
 
 To rotate a media or backup key, create its new local key file, then run
 `scripts/secrets.sh import-s3 media --replace` or
@@ -274,7 +274,6 @@ These contracts match the server and Caddy images:
   WAF match logs at `/var/log/caddy/waf/serving-match.log` and
   `/var/log/caddy/waf/maintenance-match.log`, mounted from tmpfs
   `/run/aboutme/caddy-log`. Each stream has at most two rolled files. The image
-  must start without `ORIGIN_CERT` and `ORIGIN_KEY` when `EDGES=direct`, and
   binds 80 and 443 as uid 10001 (the host sets
   `net.ipv4.ip_unprivileged_port_start=80`).
 - Server SMTP sender: `AUTH_EMAIL_MODE=smtp`, `SMTP_HOST`, `SMTP_PORT`,

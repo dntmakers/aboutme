@@ -49,9 +49,8 @@ by ACME HTTP-01 or TLS-ALPN-01, Caddy's default challenges, and serves hashed
 `/_nuxt/*` assets with Nuxt's immutable cache headers. The security group admits
 TCP 80 and 443 from anywhere and TCP 22922 from all sources (owner, 2026-10-10).
 Caddy takes the client address from the socket, strips every forwarding header,
-and sends one `X-Real-IP` to Go; Go keeps trusting only loopback. The CloudFront
-listener with `CloudFront-Viewer-Address` remains in the code for the AWS path.
-Production uses `EDGES=direct`.
+and sends one `X-Real-IP` to Go; Go keeps trusting only loopback. Production
+uses `EDGES=direct`, the only edge.
 
 Serving Caddy uses `grace_period 5s` to bound SSE and MCP stream draining below
 Podman's default 10s stop timeout.

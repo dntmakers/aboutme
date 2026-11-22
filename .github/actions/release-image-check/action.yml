@@ -52,8 +52,7 @@ runs:
             exit 1
             ;;
           caddy)
-            docker run --rm "$IMAGE" adapt
-            docker run --rm -e EDGES=cloudfront "$IMAGE" adapt
+            docker run --rm -e EDGES=direct "$IMAGE" adapt
             ;;
           observer*)
             version=$(docker run --rm "$IMAGE" version)

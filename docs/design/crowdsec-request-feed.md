@@ -88,8 +88,7 @@ Each private file caps at 1 MiB plus one uncompressed size roll; timed rotation
 is off. Precreate exact paths and tail without globs. At startup and every five
 minutes, `crowdsec-retention.sh` truncates request and bouncer feeds and removes
 rolls; prove parser continuity after truncation. Reboot removes the feeds. Caddy
-excludes both access logger names, removes URI data from runtime errors, and
-emits no feed from the CloudFront listener, even in a shared image.
+excludes both access logger names and removes URI data from runtime errors.
 
 ## Detection
 

@@ -144,8 +144,7 @@ The current Caddyfile is a development trust boundary. Do not expose it to the
 Internet or place it unchanged behind another proxy. Production uses
 `caddy/production/` with `EDGES=direct` on the Vietnam host. Caddy terminates
 TLS on 443, strips forwarding headers, and uses the socket address. The
-[Vietnam deployment](vn/README.md) owns host setup; no deployed edge uses the
-CloudFront listener.
+[Vietnam deployment](vn/README.md) owns host setup.
 
 The [self-hosting guide](../docs/guides/self-hosting.md) states the current
 operator scope and TLS limits.
