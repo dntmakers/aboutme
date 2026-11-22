@@ -77,8 +77,8 @@ complete new document may be visible. The run loop logs that error.
 
 The [host design](../../docs/design/deployment-transparency/host.md) defines the
 root timer, Quadlet restrictions, Caddy mounts, and weaker host trust limit. The
-host image is the single-platform amd64 `<tag>-amd64` tag. The plain version tag
-is a single-platform arm64 image that no deployment uses.
+host image is the single-platform amd64 `<tag>-amd64` tag. Releases publish no
+other observer image.
 
 ## Package layout
 

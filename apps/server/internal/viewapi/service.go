@@ -62,11 +62,18 @@ func New(deps Dependencies) (*Service, error) {
 }
 
 func (s *Service) RegisterRoutes(mux *http.ServeMux) {
-	mux.Handle(StartPath, s.publicLimit()(s.publicRoute(s.handleStart)))
+	mux.Handle(StartPath, logRoute("public_view_start", s.publicLimit()(s.publicRoute(s.handleStart))))
 	mux.Handle(CollectPath, s.publicLimit()(s.publicRoute(s.handleCollect)))
 	owner := s.ownerChain()
 	mux.Handle(SummaryPath, getOnly(owner(http.HandlerFunc(s.handleSummary))))
 	mux.Handle(DetailPath, getOnly(owner(http.HandlerFunc(s.handleDetail))))
+}
+
+func logRoute(class string, next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		api.SetLogRoute(r.Context(), class)
+		next.ServeHTTP(w, r)
+	})
 }
 
 func (s *Service) publicLimit() api.Middleware {

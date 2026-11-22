@@ -88,11 +88,9 @@ notice_revoke() {
   sync /var/lib/aboutme/privacy-notice
 }
 notice_epoch_rotate() {
-  local previous=${1:-} next
+  local next
   next=$(python3 -I -c 'import uuid; print(uuid.uuid4())') || return 1
-  [[ $next != "$previous" ]] || return 1
   printf '%s\n' "$next" | notice_replace epoch || return 1
-  notice_epoch=$next
 }
 notice_unit_stopped() {
   local result
@@ -113,81 +111,7 @@ notice_quiesce() {
   systemctl start aboutme-maintenance && systemctl stop aboutme-server || return 1
   notice_unit_stopped aboutme-server && aboutme_assert_cutover_quiescent
 }
-notice_installed_admission() {
-  local record tag number image
-  notice_safe_file /var/lib/aboutme/release.json 644 || return 1
-  record=$(jq -ce 'select(keys==["caddy_image","maintenance_image","maintenance_number","maintenance_tag","release_number","release_tag","server_image","web_image"])' /var/lib/aboutme/release.json) || return 1
-  tag=$(jq -r .release_tag <<<"$record")
-  [[ $tag =~ ^v(0|[1-9][0-9]{0,2})\.(0|[1-9][0-9]{0,2})\.(0|[1-9][0-9]{0,2})$ ]] || return 1
-  number=$((10#${BASH_REMATCH[1]} * 1000000 + 10#${BASH_REMATCH[2]} * 1000 + 10#${BASH_REMATCH[3]}))
-  [[ $number == "$(jq -r .release_number <<<"$record")" ]] || return 1
-  image=$(jq -r .server_image <<<"$record")
-  [[ $image =~ ^ghcr\.io/(dannyota|dntmakers)/aboutme-server@sha256:[0-9a-f]{64}$ ]] || return 1
-  notice_safe_file /etc/containers/systemd/aboutme-server.container 644 &&
-    grep -qxF "Image=$image" /etc/containers/systemd/aboutme-server.container || return 1
-  printf '%s\n' "$tag"
-}
-notice_restore_host_check() {
-  if notice_absent /var/lib/aboutme/release.json; then notice_app_absent; return; fi
-  [[ $(notice_installed_admission) == "$notice_admission" ]] || return 1
-  # shellcheck source=../scripts/deploy-safety.sh
-  source /usr/local/lib/aboutme/deploy-safety.sh
-  aboutme_assert_cutover_quiescent || return 1
-  local unit
-  for unit in crowdsec crowdsec-firewall-bouncer aboutme-crowdsec-retention.timer aboutme-migrate aboutme-db-setup; do
-    notice_unit_stopped "$unit" || return 1
-  done
-}
 notice_fence() { /usr/local/lib/aboutme/fence.sh "$@"; }
-notice_read_owner() {
-  local state
-  notice_recheck_mount || return 1
-  state=$(notice_fence read 2>/dev/null) || return 1
-  [[ $(jq -r '.operation_id // empty' <<<"$state") == "$notice_operation" && \
-    $(jq -r '.operation_kind // empty' <<<"$state") == notice_restore && \
-    $(jq -r '.operation_tag // empty' <<<"$state") == "$notice_admission" ]]
-}
-notice_restore_begin() {
-  (($# == 0)) || { notice_invalid; return 1; }
-  [[ $(id -u) == 0 ]] && notice_overrides_absent || return 1
-  notice_identity=$(notice_mount_identity) || return 1
-  notice_authority_check || return 1
-  local state
-  state=$(notice_fence read 2>/dev/null) || return 1
-  [[ $(jq -r '.notice_authority.state // empty' <<<"$state") == adopted && \
-    $(jq -r '.operation_id // empty' <<<"$state") == '' ]] || return 1
-  if notice_absent /var/lib/aboutme/release.json; then
-    notice_app_absent || return 1
-    notice_admission=$(jq -er .minimum_tag <<<"$state") || return 1
-  else notice_admission=$(notice_installed_admission) || return 1; fi
-  notice_operation=$(notice_fence lock notice_restore "$notice_admission" 2>/dev/null) || return 1
-  [[ $notice_operation =~ ^[A-Za-z0-9_-]{42}[AEIMQUYcgkosw048]$ ]] && notice_read_owner
-}
-notice_restore_pre_restore() {
-  (($# == 0)) || { notice_invalid; return 1; }
-  if ! notice_absent /var/lib/aboutme/release.json; then notice_quiesce || return 1; fi
-  notice_read_owner && notice_restore_host_check && notice_authority_check || return 1
-  local previous
-  previous=$(cat /var/lib/aboutme/privacy-notice/epoch) || return 1
-  notice_replace restore-reconciliation </dev/null && notice_epoch_rotate "$previous" && \
-    notice_revoke send.json && notice_revoke activation.json || return 1
-  notice_restore_denial
-}
-notice_restore_denial() {
-  notice_read_owner && notice_restore_host_check && notice_authority_check || return 1
-  [[ $(cat /var/lib/aboutme/privacy-notice/epoch) == "$notice_epoch" && \
-    -f /var/lib/aboutme/privacy-notice/restore-reconciliation && ! -s /var/lib/aboutme/privacy-notice/restore-reconciliation ]] || return 1
-  notice_absent /var/lib/aboutme/privacy-notice/send.json && notice_absent /var/lib/aboutme/privacy-notice/activation.json
-}
-notice_restore_postcheck() {
-  (($# == 0)) || { notice_invalid; return 1; }
-  notice_restore_denial
-}
-notice_restore_finish() {
-  (($# == 0)) || { notice_invalid; return 1; }
-  [[ ${notice_completed:-} == yes && ${notice_helper_joined:-} == yes ]] || return 1
-  notice_restore_denial && notice_fence notice-restore-release "$notice_operation" >/dev/null 2>&1
-}
 notice_wire() {
   python3 -I - "$@" 5<&0 <<'PY'
 import datetime,json,os,re,sys

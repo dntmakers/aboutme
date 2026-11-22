@@ -20,4 +20,4 @@ The root [authority map](../AGENTS.md#map) owns precedence. Accepted ADRs overri
 
 `api/openapi.yaml` generates the frontend client through the [API guide](api/AGENTS.md). `brand/src/` feeds `apps/web/scripts/render-brand.mjs`; `brand/README.md` maps brand sources and exported assets.
 
-[Testing](../instructions/testing.md) and [documentation instructions](../instructions/documentation.md) own human-document formatting and agent-only exclusions. `scripts/check-doc-links.mjs` checks local links; `scripts/check-lengths.sh` checks file size. `scripts/test/codex-agent-test.sh` checks launcher wiring and settings validation using fixture roles.
+[Testing](../instructions/testing.md) and [documentation instructions](../instructions/documentation.md) own human-document formatting and agent-only exclusions. `scripts/check-doc-links.mjs` checks local links; `scripts/check-lengths.sh` checks file size.

@@ -19,11 +19,11 @@ Status: Accepted (2026-08-11, 2026-08-12, 2026-09-19, 2026-09-20, 2026-10-10,
   documentation or prose the primary wrote, skip this review. For one-line
   changes, including production DNS, the manager shows plan or diff evidence
   instead. Findings return to the author, and the same reviewer confirms each
-  fix. The reviewer runs as a separate job from the author on `gpt-6-astra`; the
-  primary reviews a design that model wrote. A security-sensitive change beyond
-  one line (authentication, sessions, CSRF, sanitizing, concurrency and CAS,
-  idempotency, media privacy, publish revocation) needs the reviewer to confirm
-  those invariants by name.
+  fix. The reviewer runs as a separate job on a different model from the author,
+  on the route [workflow](../../instructions/workflow.md#models-and-ownership)
+  names. A security-sensitive change beyond one line (authentication, sessions,
+  CSRF, sanitizing, concurrency and CAS, idempotency, media privacy, publish
+  revocation) needs the reviewer to confirm those invariants by name.
 - **GitHub CI is the main push and release gate.** `ci.yml` runs checks per job,
   including builds, typechecks, tests, linters, browser proofs, and VN
   infrastructure. The `contracts` job runs full-history gitleaks. The aggregate
@@ -134,9 +134,8 @@ that evidence. The owner's work is pushed as branches without pull requests. The
 full hosted gate still runs once on every `main` push and still gates tags and
 deployments on the exact commit; nobody waits for it after landing. Contributors
 keep pull request CI. The owner rejected using that host as a self-hosted
-runner. Reviews follow the author's model: `gpt-6.1-sol` reviews Terra work and
-`gpt-6-astra` reviews Sol work. A `main` push that changes no web-e2e input,
-after a green `main` commit, skips `web-e2e`
+runner. A reviewer never runs on the author's model. A `main` push that changes
+no web-e2e input, after a green `main` commit, skips `web-e2e`
 ([path selection](../design/ci-path-selection.md)); display mutation tests run
 when `apps/web/e2e/` changes and nightly.
 
@@ -227,3 +226,9 @@ above retains this exemption.
 - 2026-11-01: Restricted local gate runs to trusted commits and required review
   of gate and dependency changes before execution because they run with the
   owner's privileges.
+- 2026-11-22: The owner routed design drafts and code review to GPT Sol, design
+  review to GPT Astra, and implementation to GPT Terra, each with a Claude
+  stand-in, and removed the Codex CLI launcher. A reviewer never runs on the
+  author's model.
+  [Workflow](../../instructions/workflow.md#models-and-ownership) owns the
+  routes; records name model families, not versioned IDs.

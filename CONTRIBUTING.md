@@ -48,7 +48,7 @@ gate; a release requires it green.
 
 For documentation changes, format and lint the files you changed. Prettier and
 markdownlint cover Markdown that people read. Agent instruction files
-(`AGENTS.md`, `CLAUDE.md`, `instructions/`, `.claude/`, `.codex/`) and plans in
+(`AGENTS.md`, `CLAUDE.md`, `instructions/`, `.claude/`) and plans in
 `docs/plans/` are written for agents, kept minified, and not checked.
 
 ```sh

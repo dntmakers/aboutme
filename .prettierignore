@@ -8,7 +8,6 @@ packages/schema/gen/
 **/AGENTS.md
 .claude/
 instructions/
-.codex/
 docs/plans/
 *.yml
 *.yaml

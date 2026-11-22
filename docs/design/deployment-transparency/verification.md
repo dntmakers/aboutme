@@ -37,9 +37,8 @@ For each image, after the push:
    the action skips storage records for a user-owned repository anyway.
 3. The SBOM and digest files are uploaded as job artifacts.
 
-The observer publishes separate single-platform images: the plain version tag is
-`linux/arm64`, which no deployment uses, and `<tag>-amd64` is `linux/amd64` for
-the Vietnam host. Both build on native GitHub-hosted runners with the same
+The observer publishes one single-platform image, `<tag>-amd64` (`linux/amd64`),
+for the Vietnam host. It builds on a native GitHub-hosted runner with the same
 smoke, Trivy, provenance, and SBOM checks. An observer job failure does not
 block the app images or their release.
 

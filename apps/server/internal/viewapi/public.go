@@ -25,11 +25,6 @@ import (
 
 const maxBodyBytes = 4 * 1024
 
-const (
-	botLabelHeader        = "X-Amzn-Waf-Aboutme-Bot"
-	datacenterLabelHeader = "X-Amzn-Waf-Aboutme-Dc"
-)
-
 var hexPattern = regexp.MustCompile(`^[0-9a-f]{2,128}$`)
 
 func (s *Service) preflight(w http.ResponseWriter, r *http.Request) ([]byte, bool) {
@@ -207,7 +202,7 @@ func (s *Service) handleCollect(w http.ResponseWriter, r *http.Request, body []b
 		Token:     *request.Token,
 		Challenge: *request.Challenge,
 		Solution:  viewcount.Solution{Counter: *request.Solution.Counter, DerivedKey: *request.Solution.DerivedKey},
-	}, s.viewer(r), s.edgeLabels(r))
+	}, s.viewer(r), viewcount.EdgeLabels{})
 	if s.logger != nil && outcome != viewcount.OutcomeNone {
 		s.logger.DebugContext(r.Context(), "viewapi: collect", "outcome", string(outcome))
 	}
@@ -226,19 +221,4 @@ func (s *Service) viewer(r *http.Request) viewcount.Viewer {
 		viewer.Account = &account
 	}
 	return viewer
-}
-
-func (s *Service) edgeLabels(r *http.Request) viewcount.EdgeLabels {
-	if !s.trustedProxies.TrustsPeer(r) {
-		return viewcount.EdgeLabels{}
-	}
-	return viewcount.EdgeLabels{
-		Bot:        labelSet(r.Header, botLabelHeader),
-		Datacenter: labelSet(r.Header, datacenterLabelHeader),
-	}
-}
-
-func labelSet(header http.Header, name string) bool {
-	values := header.Values(name)
-	return len(values) == 1 && values[0] == "1"
 }

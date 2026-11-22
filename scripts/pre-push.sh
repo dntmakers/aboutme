@@ -381,7 +381,7 @@ check_web() {
 check_docs() {
   local -a files
   mapfile -t files < <(list "${CHANGED[@]}" | filter '\.md$' |
-    grep -Ev '(^|/)(AGENTS|CLAUDE)\.md$|^(instructions/|docs/plans/|\.claude/|\.codex/|\.worktrees/|\.superpowers/|apps/web/(\.nuxt|\.output|public/font-licenses)/)|(^|/)(node_modules|\.terraform)/' ||
+    grep -Ev '(^|/)(AGENTS|CLAUDE)\.md$|^(instructions/|docs/plans/|\.claude/|\.worktrees/|\.superpowers/|apps/web/(\.nuxt|\.output|public/font-licenses)/)|(^|/)(node_modules|\.terraform)/' ||
     true)
   if ((${#files[@]} == 0)); then
     record prettier skip "no changed Markdown people read"

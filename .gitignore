@@ -22,9 +22,6 @@ __pycache__/
 .claude/*
 !.claude/agents/
 !.claude/settings.json
-!.codex/
-.codex/*
-!.codex/agents/
 deploy/aws/**/.terraform/
 deploy/aws/**/*.tfstate
 deploy/aws/**/*.tfstate.*

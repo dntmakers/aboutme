@@ -4,27 +4,28 @@ The primary session is the manager. It plans, briefs, verifies each worker itsel
 
 ## Models and ownership
 
-|Work|Model|
-|-|-|
-|Design, documents, and decisions|The primary|
-|Implementation, troubleshooting with its fix, and QA proofs|Claude Sonnet or GPT Terra as a subagent of the primary|
-|Independent review and fix confirmation: code, architecture and contract designs, adversarial passes|A fresh Claude Opus or GPT Sol subagent of the primary|
-|Hard and complex work: security, concurrency or migration code, or a task that failed twice|Claude Fable or GPT Astra, never a default|
-|UI design and visual direction (owner, 2026-11-15)|Claude Opus or Fable as a subagent|
-|Exploration, searches, summaries, mechanical reading|An Explore subagent|
+Routes (owner, 2026-11-22):
 
-Model routing is the owner's (2026-11-20). The primary calls GPT models directly as Claude Code subagents and prefers that to the Codex CLI (owner, 2026-11-22); the CLI is the fallback when direct dispatch fails or the runtime model cannot be confirmed. When GPT is out, Opus reviews, Sonnet implements, and Fable takes the hard and complex work. The reviewing model is never the one that implemented the work. Subagents each work in their own worktree, run bounded build, vet, lint, and test commands under the managed lock, and never change Git state or dispatch other agents.
+|Work|Role|GPT agent|Claude stand-in|
+|-|-|-|-|
+|Design, ADR, contract, or UI spec draft|`designer`|Sol|Opus|
+|Design review|`reviewer`|Astra|Fable|
+|Implementation, troubleshooting with its fix, and QA proofs|`implementer`|Terra|Sonnet|
+|Code review and fix confirmation, including adversarial passes|`reviewer`|Sol|Opus|
+|Searches, summaries, mechanical reading|-|-|`Explore` agent|
 
-The primary (owner, 2026-11-10) writes designs, ADR edits, and documentation itself, reviews them, and makes the decisions. Its documentation and prose need no independent review. An architecture or contract design and all code still get one independent review (owner, 2026-11-10). The reviewer is a separate agent with fresh context: it gets the code or design, the authorities and the check output, never the author's conclusions, and it never implements what it reviews.
+The primary writes documentation and prose itself, edits every design draft, and decides. Role rules are in [roles](roles.md); each brief names the role and points the worker there. A reviewer never runs on the author's model, and Astra and Fable never write code.
 
-The owner chooses the primary session's model. Implementers work in any lane within the brief's owned paths. When the primary falls back to the Codex CLI, it uses `scripts/codex-agent.sh [--model <m>] [--effort <e>] [--search] <role> <worktree> <brief-file> <report-file>` with the role TOML defaults in `.codex/agents/`.
+Dispatch each worker as a fresh `Agent` subagent with `subagent_type` `terra`, `sol`, or `astra` and no `model` override. These are the owner's user-level agents; each alias resolves to the newest model of its family, so plans and briefs name the family, never a model ID. The worker's first report line is its runtime model ID, which must belong to the named family. When a user-level agent cannot be dispatched, use the Codex plugin (`codex:codex-rescue` agent for work, `/codex:review` or `/codex:adversarial-review` for review) with `--model` set to the newest ID of the family; when GPT is unavailable, use the Claude stand-in with the `Agent` `model` `sonnet`, `opus`, or `fable`. Never fork for independent review: a fork inherits the parent model and context.
 
-Design proposals cover benefits, trade-offs, dependencies, limits, alternatives, migration and loss rules, older-client behavior, security, size, and release order. The owner approves product-visible choices before code starts. UI specs give exact values, breakpoints, and copy in both languages. Research cites first-party sources and marks claims supported only by secondary sources as needing verification.
+These agents have every tool, so a reviewer brief forbids edits, writing commands, and Git. The reviewer gets the code or design, the authorities, the diff, and the check output, never the author's conclusions. Resume the same reviewer with SendMessage to confirm fixes, and answer a worker's question with SendMessage to the same agent instead of starting a fresh one. Subagents each work in their own worktree and never change Git state or dispatch other agents. The owner chooses the primary session's model.
+
+The owner approves product-visible choices before code starts.
 
 ## Flow
 
 1. Read the brief's authorities and the domain's design docs and accepted ADRs. Design wins over a plan; an accepted ADR wins over conflicting design text.
-2. For a contract or architecture change, the primary writes the proposal, and an independent reviewer reviews it before implementation. The author revises and the reviewer confirms. Small changes skip design.
+2. For a contract or architecture change, the designer drafts the proposal from the primary's brief, the primary edits and decides, and the design reviewer reviews it before implementation. The designer revises and the reviewer confirms. Small changes skip design.
 3. Brief one implementer per bounded task with exact paths. Write the failing regression test first, then the smallest correct change. Observe failure in CI or an approved local exception; otherwise report it as unrun. Adversarial cases for write safety, races, bounds, hostile input, authorization, and CSRF belong to the author.
 4. Run the independent review once after the last code task. One-line changes, including production DNS, skip the reviewer pass; the primary shows plan or diff evidence instead under [ADR 0024](../docs/adr/0024-delivery-gates.md#amendment-one-line-review-exemption-2026-10-10). Local-only and test-only changes, and documentation or prose the primary wrote, also skip the fresh review under the delivery rules. Other security-relevant changes still require the adversarial pass before merge.
 5. Return findings to the author for fixes, then request the original reviewer to confirm each fix on the same route.
@@ -64,12 +65,7 @@ When CI fails or a defect needs diagnosis, the primary downloads the failing log
 
 ## Lane instructions
 
-Implementers read their own diff line by line, update tests, specs, snapshots, and docs that assert changed behavior, and follow nearby code patterns. Report needed edits outside the brief's paths instead of making them.
-
-- Backend: follow [Go and database rules](go.md) and the change-area gates in [testing](testing.md).
-- Frontend: follow [web rules](web.md) for source manifests, renderer boundaries, and display assertions, and [resources](resources.md) for active browser proofs.
-- Devops: follow [deployment rules](deploy.md), the production runbook, and release authorities linked there.
-- Shared generated files: regenerate schema Go, sqlc output, OpenAPI clients, web source manifests, and public roots from their sources when affected. Never hand-edit generated output. The primary runs generators under [resources](resources.md), using existing callers until wrapper integration lands. The source's assigned implementer reports each changed generated file and line. Serialize migrations and schema versions.
+Implementer rules, including lanes, shared files, and generated output, are in [roles](roles.md#implementer).
 
 ## QA and personas
 

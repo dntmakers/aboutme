@@ -42,3 +42,19 @@ func TestGateHTMLRejection_ProjectPageLinksCarryThePage(t *testing.T) {
 		t.Fatal("the resume page's gate no longer links the plain view start")
 	}
 }
+
+func TestGateHTMLRejection_TitleMatchesTheParsedLineEndings(t *testing.T) {
+	origin := mustPublicOrigin(t)
+	for name, title := range map[string]string{
+		"carriage return":           "Ada\rLovelace — Resume",
+		"carriage return line feed": "Ada\r\nLovelace — Resume",
+	} {
+		t.Run(name, func(t *testing.T) {
+			envelope := gateTestEnvelope()
+			envelope.PageTitle = title
+			if rule := gateHTMLRejection([]byte(gateValidHTML(envelope, origin)), envelope, origin); rule != "" {
+				t.Fatalf("gateHTMLRejection() = %q, want the page accepted", rule)
+			}
+		})
+	}
+}

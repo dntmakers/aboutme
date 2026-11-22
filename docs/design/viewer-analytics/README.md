@@ -42,9 +42,9 @@ fingerprinting, and sign in to view stores nothing about the viewer.
 3. **Nothing about a viewer is recorded.** No view event, viewer identity, or
    consent record exists. Sign in to view keeps only a pass cookie in the
    viewer's browser that names no person.
-4. **No fingerprinting.** Filtering uses edge labels, a page-issued token, proof
-   of work, visible time, and interaction. It never combines device traits into
-   an identifier.
+4. **No fingerprinting.** Filtering uses a page-issued token, proof of work,
+   visible time, and interaction. It never combines device traits into an
+   identifier.
 5. **No IP address is stored.** The IP address is used in memory for rate limits
    and the daily network key only.
 6. **Counts never reach agents.** No MCP tool reads them.
@@ -68,7 +68,7 @@ own switch in its release.
 | V3  | Per-resume counting mode                                                                                                                                | Approved as counting always on, no setting ([above](#counting-is-always-on))                                   |
 | V4  | All viewer-facing text: the privacy notice change, the Views page, the sign-in gate, and the join invite; the owner reviews the Vietnamese              | Approved (2026-09-27), Vietnamese included                                                                     |
 | V5  | A `sign_in` resume keeps its link-preview card and page title public                                                                                    | Carried into sign in to view                                                                                   |
-| V6  | AWS WAF Bot Control and the Anonymous IP list in Count mode only: about USD 15 a month ([cost](delivery.md#cost))                                       | Approved                                                                                                       |
+| V6  | AWS WAF Bot Control and the Anonymous IP list in Count mode only: removed with AWS delivery (ADR 0026)                                                  | Approved                                                                                                       |
 | V7  | DPIA and cross-border assessment for viewer tracking                                                                                                    | Dropped with viewer tracking; counting keeps no viewer data ([legal](legal.md#assessments))                    |
 | V8  | The join invite shows only to signed-in viewers of a `sign_in` resume, never on ordinary public pages                                                   | Approved                                                                                                       |
 | V9  | The owner is gated on their own `sign_in` resume like any viewer; public routes never read the session to admit                                         | Approved (2026-09-27), so public routes stay session-free ([sign in to view](sign-in-to-view.md#sign-in-flow)) |
@@ -81,7 +81,7 @@ own switch in its release.
 
 | Release         | Outcome                                                                                                                   | Risk                                                               |
 | --------------- | ------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
-| View counts     | Beacon, filter layers, WAF labels, daily aggregates, share signals, owner exclusion, Views page, notice                   | Medium: new public write endpoint, WAF change, migration           |
+| View counts     | Beacon, filter layers, daily aggregates, share signals, owner exclusion, Views page, notice                               | Medium: new public write endpoint, migration                       |
 | Sign in to view | Per-resume switch behind a server flag, gate, `view` OAuth purpose, pass cookie, gated routes, join invite, release fence | High: OAuth, access control on public routes, revocation, rollback |
 
 ## Honest limit
