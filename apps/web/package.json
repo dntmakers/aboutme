@@ -27,7 +27,7 @@
     "@vueuse/core": "15.0.0",
     "ajv": "8.20.0",
     "ajv-formats": "3.0.1",
-    "altcha-lib": "2.9.0",
+    "altcha-lib": "2.10.0",
     "class-variance-authority": "0.7.1",
     "clsx": "2.1.1",
     "cookie-es": "3.1.1",
@@ -78,7 +78,7 @@
     "tsx": "4.23.15",
     "typescript": "6.0.3",
     "vite": "8.3.8",
-    "vitest": "5.1.0",
+    "vitest": "5.1.1",
     "vue-tsc": "3.3.14",
     "yaml": "2.9.1"
   }
