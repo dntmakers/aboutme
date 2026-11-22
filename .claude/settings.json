@@ -1,5 +1,4 @@
 {
-  "agent": "manager",
   "enabledPlugins": {
     "impeccable@impeccable": false
   }
