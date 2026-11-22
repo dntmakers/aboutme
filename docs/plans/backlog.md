@@ -30,7 +30,6 @@ Open items that outlived their shipped plans. One line each, with the evidence t
 - `release-images.yml` still copies the arm64 SBOMs to unsuffixed `aboutme-<name>.spdx.json` assets and its release notes call them "for existing AWS transparency links" (`.github/workflows/release-images.yml:494-496`, `:523-525`, asserted in `scripts/test/workflow-safety-test.sh:1109`), but the deployment document now accepts only `-amd64` SBOM links. Remove the copy, the sentence and the assertion.
 - The web deployment decoder's version pattern accepts leading zeros that `deploy/observer/schema/deployment.v1.json` rejects (`apps/web/app/utils/deploymentDocument.ts`). Use the schema's `(0|[1-9][0-9]*)` form.
 - Nothing validates `apps/web/e2e/fixtures/deployment/*.json` against `deploy/observer/schema/deployment.v1.json`, and `deploy/observer/README.md` and `AGENTS.md` wrongly say the frontend reads `testdata/examples/`. Add a schema check for the fixtures and correct the text.
-- Fold Dependabot pull requests #266, #273 (vitest 5, drop it if it breaks), #308, #309 and #310 and the open alerts with patches (`minimatch` in `pnpm-lock.yaml`; `go.opentelemetry.io/otel` in `deploy/caddy/production/build/go.mod`) into one dependency change, then close the pull requests. The `go-jose/v3` alerts in the Caddy build have no patch: check whether a newer Caddy drops it.
 
 ## Production acceptance
 
