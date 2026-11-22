@@ -6,7 +6,8 @@ repo_root=$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)
 source "$repo_root/deploy/vn/host/crowdsec-offline.sh"
 
 pinned_postgresql=(postgresql-common=293.pgdg24.04+1 postgresql-client-common=293.pgdg24.04+1
-  postgresql-18=18.6-1.pgdg24.04+2 postgresql-client-18=18.6-1.pgdg24.04+2)
+  postgresql-18=18.6-1.pgdg24.04+2 postgresql-client-18=18.6-1.pgdg24.04+2
+  libpq5=18.6-1.pgdg24.04+2 pgbackrest=2.59.3-1.pgdg24.04+1)
 
 apt_run() {
   "$@" >"$apt_log" 2>&1 && rm -f -- "$apt_log"
@@ -390,7 +391,7 @@ status=0
 }
 declare -A pinned=()
 for spec in "${pinned_postgresql[@]}"; do pinned[${spec%%=*}]=${spec#*=}; done
-for pair in postgresql-common:postgresql-client-common postgresql-18:postgresql-client-18; do
+for pair in postgresql-common:postgresql-client-common postgresql-18:postgresql-client-18 postgresql-18:libpq5; do
   [[ -n ${pinned[${pair%:*}]:-} && ${pinned[${pair#*:}]:-} == "${pinned[${pair%:*}]}" ]] || {
     echo "pinned ${pair%:*} needs ${pair#*:} pinned at the same version" >&2
     exit 1

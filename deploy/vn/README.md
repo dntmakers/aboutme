@@ -257,6 +257,10 @@ CrowdSec publishes no key fingerprint; the committed key is the one
 packagecloud.io served on 2026-10-10. apt holds every pinned package, and
 unattended-upgrades installs only Ubuntu security updates.
 
+PGDG's main index drops old versions, so the installer also adds PGDG's
+`noble-pgdg-archive` source, signed by the same key, which keeps every pin. The
+PostgreSQL packages install without Recommends so `postgresql-18-jit` stays out.
+
 The installer supports pin raises for the PostgreSQL packages and pgBackRest.
 Edit their version constants in `host/install.sh` and rerun the reviewed
 installer bundle. It restores existing holds if installation or version checks
