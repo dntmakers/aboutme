@@ -407,7 +407,7 @@ podman run --rm -e EDGES=direct -e DIRECT_HOST=vn.aboutme.vn -e DIRECT_WWW_HOST=
   { echo "adapt failed for EDGES=direct with a rehearsal host and CrowdSec" >&2; exit 1; }
 
 start_direct -e EDGES=direct -e MAINTENANCE=1 -e CROWDSEC_API_URL=http://127.0.0.1:8090/ \
-  -e CROWDSEC_API_KEY_FILE=/run/secrets/crowdsec-bouncer-key -v "$work/bouncer.key:/run/secrets/crowdsec-bouncer-key:ro"
+  -e CROWDSEC_API_KEY="$bouncer_key"
 wait_direct 503
 podman exec "$name" sh -c 'test ! -s /run/caddy/crowdsec.global && test ! -s /run/caddy/crowdsec.handler' ||
   { echo "maintenance: CrowdSec stream or handler configured" >&2; exit 1; }
