@@ -22,6 +22,7 @@ import { isUnsetLanguage } from '../resumeLanguage';
 const props = defineProps<{
   readonly controller: HistoryController;
   readonly record: ResumeRecord;
+  readonly restoreBlocked: boolean;
 }>();
 
 const { locale } = useLocale();
@@ -35,7 +36,9 @@ const busy = computed(() => phase.value === 'busy');
 const hidesRestore = computed(
   () => phase.value === 'invalid' || phase.value === 'gone',
 );
-const restoreDisabled = computed(() => busy.value || phase.value === 'later');
+const restoreDisabled = computed(
+  () => busy.value || phase.value === 'later' || props.restoreBlocked,
+);
 
 const entry = computed(() => {
   const id = dialog.value?.id;
@@ -154,6 +157,13 @@ function onOpenAutoFocus(event: Event): void {
         kind="error"
       >
         {{ alert }}
+      </StatusBanner>
+      <StatusBanner
+        v-if="restoreBlocked"
+        class="mt-0"
+        kind="error"
+      >
+        {{ copy.restoreBlocked }}
       </StatusBanner>
       <AlertDialogFooter>
         <Button

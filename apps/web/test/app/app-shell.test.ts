@@ -216,7 +216,7 @@ describe('AppShell', () => {
         .find((a) => a.attributes('href') === '/app/settings/sessions');
       expect(resumes?.classes()).not.toContain('max-sm:hidden');
       expect(views?.classes()).toContain('max-sm:hidden');
-      expect(settings?.classes()).toContain('max-sm:hidden');
+      expect(settings?.classes()).toContain('max-md:hidden');
       expect(wrapper.find('[data-testid="account-menu"]').exists()).toBe(
         true,
       );

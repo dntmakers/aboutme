@@ -550,6 +550,27 @@ describe('private photo controls', () => {
     expect(retry).toHaveBeenCalledWith('retry-photo-1');
   });
 
+  it('disables retry until the resend finishes', async () => {
+    let finish!: () => void;
+    const retry = vi.fn(() => new Promise<void>((resolve) => {
+      finish = resolve;
+    }));
+    const wrapper = mount(PhotoPanel, {
+      props: {
+        record: retryRecord('media-busy', 1_000),
+        actions: { retry } as unknown as ResumeEditorActions,
+      },
+    });
+
+    const button = wrapper.get('[data-action="retry-photo"]');
+    await button.trigger('click');
+    expect(button.attributes('disabled')).toBeDefined();
+    finish();
+    await Promise.resolve();
+    await wrapper.vm.$nextTick();
+    expect(button.attributes('disabled')).toBeUndefined();
+  });
+
   it('offers retry for a retryable photo delete', async () => {
     const retry = vi.fn();
     const wrapper = mount(PhotoPanel, {
