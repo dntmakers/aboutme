@@ -190,7 +190,8 @@ func TestSecondFactorTOTPRoutes_KeepTheRouterExactCacheControl(t *testing.T) {
 
 type noPublicRoutes struct{}
 
-func (noPublicRoutes) Recognizes(string) bool { return false }
+func (noPublicRoutes) Recognizes(string) bool   { return false }
+func (noPublicRoutes) RouteClass(string) string { return "" }
 func (noPublicRoutes) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	http.NotFound(w, r)
 }
