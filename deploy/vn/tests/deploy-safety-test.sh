@@ -46,20 +46,19 @@ tracked_floor_check() {
 tracked_floor_check "$root"
 
 # macOS limits Unix socket paths to 104 bytes (unix(4)).
-control_path='ControlPath=\$ssh_dir/(ssh-%C|prod\.sock|drill\.sock)("| )'
-for script in deploy.sh restore-drill.sh; do
-  path=$root/deploy/vn/scripts/$script
-  grep -qxF 'ssh_dir=$(mktemp -d /tmp/aboutme-ssh.XXXXXX)' "$path" ||
-    fail "$script: SSH socket directory must use a short private /tmp path"
-  awk '
-    /^trap (on_exit|cleanup) EXIT$/ { cleanup_ready=1 }
-    /^(work|run|ssh_dir)=\$\(mktemp -d/ && !cleanup_ready { exit 1 }
-  ' "$path" || fail "$script: register cleanup before creating temporary directories"
-  while IFS= read -r line; do
-    [[ $line =~ $control_path ]] ||
-      fail "$script: ControlPath must use a short name in the SSH socket directory"
-  done < <(grep 'ControlPath=' "$path")
-done
+control_path='ControlPath=\$ssh_dir/(ssh-%C|prod\.sock)("| )'
+script=deploy.sh
+path=$root/deploy/vn/scripts/$script
+grep -qxF 'ssh_dir=$(mktemp -d /tmp/aboutme-ssh.XXXXXX)' "$path" ||
+  fail "$script: SSH socket directory must use a short private /tmp path"
+awk '
+  /^trap (on_exit|cleanup) EXIT$/ { cleanup_ready=1 }
+  /^(work|run|ssh_dir)=\$\(mktemp -d/ && !cleanup_ready { exit 1 }
+' "$path" || fail "$script: register cleanup before creating temporary directories"
+while IFS= read -r line; do
+  [[ $line =~ $control_path ]] ||
+    fail "$script: ControlPath must use a short name in the SSH socket directory"
+done < <(grep 'ControlPath=' "$path")
 
 ssh_keepalive_scan() {
   awk '
@@ -126,7 +125,7 @@ while IFS= read -r path; do
   [[ ${report##*calls=} == 0 ]] || ssh_scripts=$((ssh_scripts + 1))
 done < <(find "$root/deploy/vn" "$root/scripts" -name '*.sh' -not -path '*/tests/*' -not -path '*/test/*' \
   -not -name '*-test.sh' | sort)
-((ssh_scripts >= 5)) || fail "SSH keepalive scan found ssh calls in $ssh_scripts scripts, expected at least 5"
+((ssh_scripts >= 4)) || fail "SSH keepalive scan found ssh calls in $ssh_scripts scripts, expected at least 4"
 
 expect_keepalive_scan() {
   local expected=$1 fixture=$work/ssh-fixture.sh report status=0

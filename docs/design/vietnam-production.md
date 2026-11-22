@@ -240,13 +240,9 @@ The repository uses S3 path-style addressing. One repository in HCM04 (owner,
 2026-10-10): the only other vStorage region is Hanoi, so a regional failure
 means waiting for HCM04 to return.
 
-The quarterly restore drill targets the latest backup and a point-in-time target
-from the previous day on a temporary vServer. It checks the goose version, row
-counts per table, the catalog grant test, and a store smoke as `aboutme_app`,
-records the recovery time, and deletes the server. The drill has no outbound
-internet because it has no floating IP or NAT. Outbound networking remains open;
-a successful restore drill is not recorded here. See the
-[host guide](../../deploy/vn/README.md#restore-drill).
+The quarterly [restore drill](restore-drill.md) restores the latest backup and
+a point-in-time target from the previous day on the owner's laptop, using only
+off-host copies of the backup keys.
 
 ## Client metadata authorization
 

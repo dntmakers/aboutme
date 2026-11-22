@@ -242,8 +242,8 @@ support promise.
 
 Prefer staged controls to broad access or blanket profiles that risk rendering
 and recovery; no benchmark compliance claim. Owner approval: narrow sources with
-console recovery; scoped drill forwarding; SSH limits/MACs; key separation;
-kexec after proof; staged server confinement; journald without auditd.
+console recovery; SSH limits/MACs; key separation; kexec after proof; staged
+server confinement; journald without auditd.
 
 [OpenSSH]: https://man.openbsd.org/sshd_config
 [Yama]: https://docs.kernel.org/admin-guide/LSM/Yama.html

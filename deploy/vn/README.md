@@ -152,8 +152,7 @@ disks", a live result).
 Encrypting any disk at server create adds one `CES` line of 30% of the flavor
 price, 170,280 VND a month for `s2-general-2x4`. Encrypting the root disk too
 adds no further charge. The `vngcloud` CLI creates an encrypted volume from
-v0.59.0 (`volume create-volume --encryption-type-id`);
-`scripts/restore-drill.sh` refuses an older CLI.
+v0.59.0 (`volume create-volume --encryption-type-id`).
 
 ## Logs and alarms
 
@@ -174,73 +173,15 @@ owns its schedule, notification recipient, and limits.
 
 ## Restore drill
 
-The production OpenTofu root can create two persistent, detached security groups
-for a restore drill. Set the nullable `drill_network` object in the ignored
-`prod.tfvars` with production's private IPv4 `/32`, nonempty resolver and
-time-service IPv4 `/32` sets, and reviewed public package and HCM04 IPv4 CIDR
-sets. The default is `null`, which creates no drill groups. The configuration
-has no live endpoint defaults.
-
-The optional groups are named `aboutme-drill-bootstrap` and
-`aboutme-drill-restore`. OpenTofu does not attach either group to a server or
-allocate a drill resource. The provider adds unmanaged default egress to each
-new group, so treat both groups as untrusted. Remove the default egress and
-audit the exact rules and attachments before any attachment. The OpenTofu
-configuration and mocked plan tests do not perform that reconciliation and do
-not make a live drill safe to run.
-
-`scripts/drill-journal.sh` is a standalone transport for bounded JSON records
-under `restore-drill/v1/`. Source it, then call
-`drill_journal_put_create <record-path> <file>` or
-`drill_journal_get <record-path> <new-file>`. It uses the existing
-`~/.config/aboutme/vn/tfstate-s3-credentials` file without printing its values.
-Set `DRILL_STATE_CREDENTIALS_FILE` to an alternate reviewed state credential
-file when the operator configuration is elsewhere. The caller owns record
-fields, chain validation, fencing, and secret-free content. The transport has no
-delete operation and is not a distributed lock.
-
-The journal uses reviewed `vngcloud` v0.78.0 native object GET and create-only
-PUT with a fixed HCM04 endpoint, isolated configuration, and bounded transfers.
-Its credential file must be a regular non-symlink file owned by the operator,
-mode 0600, containing only the static `[default]` key pair. The standalone proof
-uses reviewed `vngcloud` v0.81.0 native HEAD, create-only PUT, bounded GET, and
-DELETE with the existing state key. Its read-only management versioning check
-uses the operator's environment credentials or `VNG_PROFILE`, following
-[the laptop credential convention](#credentials-on-the-laptop). Management
-credentials remain outside each isolated object-operation environment.
-
-Before using the journal, run
-`scripts/drill-state-proof.sh --storage-project-id <existing-HCM04-project-id>`
-from an attended operator machine with those management credentials loaded. Use
-the existing state bucket's storage project ID, as passed to `buckets.sh`. The
-explicit management region `hcm-3` selects HCM04. The check accepts only
-`{"Enabled":false,"Status":"Off"}` as never configured and rejects every other
-versioning result before writing. The command creates one unique nonsecret
-object under `restore-drill/probes/`, proves that a second conditional write is
-refused, reads back the original bytes, and deletes only that object. Its final
-absence check covers the current object key; it does not claim physical erasure
-by the storage provider. Source review does not establish live proof success.
-
-During the short proof, no other process may mutate its printed, unpredictable
-probe key and no administrator may change bucket versioning. Unrelated state and
-journal writes may continue. Cleanup reads the probe again and deletes it only
-when its bytes match a payload written successfully by that proof. An unreadable
-or foreign value remains at the printed recovery key for attended resolution.
-
-`scripts/restore-drill.sh` creates a temporary encrypted server and data volume,
-reaches its private IP through the production host as an SSH jump host, installs
-PostgreSQL and pgBackRest, then restores the latest backup and a point-in-time
-target. It checks versions, row counts, grants, and an `aboutme_app` read. The
-[CrowdSec restore boundary](../../docs/runbooks/crowdsec-postgresql.md#reset-after-a-cluster-restore)
-requires notice reconciliation and an explicit operator reset before consumers
-resume. The cluster restore brings back CrowdSec data and identities; automation
-does not reset them. The exit trap deletes the server and volume unless `--keep`
-was requested.
-
-The server has no floating IP and no NAT, so it has no outbound internet for
-packages or vStorage. Outbound networking remains open. GreenNode Public NAT
-adds a `0.0.0.0/0` route for the whole VPC, which sends every VM's outbound
-traffic through it. Do not add a Public NAT to the production VPC for the drill.
+`scripts/restore-drill.sh` restores the latest backup and a point 24 hours
+earlier into a throwaway Podman container on the owner's laptop and prints
+counts only. It reads the age-encrypted host secrets from the private
+`aboutme-infra` repository with `gh`, decrypts them with
+`~/.config/aboutme/vn/infra-age.key` (`AGE_IDENTITY` overrides it), and touches
+nothing in production. Pass a local `host-secrets.age` path, or set
+`HOST_SECRETS_FILE`, to skip the download. The
+[restore drill design](../../docs/design/restore-drill.md) owns the procedure,
+cadence, and record.
 
 ## Cutover prerequisites
 
@@ -269,10 +210,10 @@ checks.
 | Default endpoints `*.vngcloud.vn` still answer after the GreenNode domain move                                              | Yes: the provider's default token and vServer URLs worked for plan and apply (2026-10-10)                                                                                                                                                                |
 | `vngcloud_vserver_volume.encryption_type` creates an encrypted volume                                                       | Yes: the data volume reads `EncryptionType` `aes-xts-plain64_256`                                                                                                                                                                                        |
 | The UEFI Ubuntu image passes as `image_id`                                                                                  | Yes                                                                                                                                                                                                                                                      |
-| User data with an SSH key ID at server creation                                                                             | Refused by GreenNode. `restore-drill.sh` omits `--ssh-key-id`; cloud-init supplies the admin key                                                                                                                                                         |
+| User data with an SSH key ID at server creation                                                                             | Refused by GreenNode; cloud-init supplies the admin key                                                                                                                                                                                                  |
 | The floating IP is created with the server (`attach_floating`) and deleted on detach                                        | Created with the server; replacing the server twice kept the same address. The server keeps `prevent_destroy`                                                                                                                                            |
 | The new security group's default egress allows outbound traffic                                                             | Yes: cloud-init installed packages over it                                                                                                                                                                                                               |
-| vStorage as the OpenTofu S3 backend and pgBackRest repository, path-style                                                   | Lock file works (412 on a contended lock), so `versions.tf` sets `use_lockfile`; pgBackRest uses the backup bucket; restore-drill outbound networking remains open                                                                                       |
+| vStorage as the OpenTofu S3 backend and pgBackRest repository, path-style                                                   | Lock file works (412 on a contended lock), so `versions.tf` sets `use_lockfile`; pgBackRest uses the backup bucket                                                                                                                                       |
 | An encrypted volume attaches to a server created with plain disks                                                           | No: 400 `cannot attach encryption volume` (wiki Compute-Servers.md)                                                                                                                                                                                      |
 | GreenNode's Ubuntu 24.04 image ships its own `sshd_config`                                                                  | Yes: `Port 234`, no `Include` of `sshd_config.d`, password login on, and `ssh.service` without socket activation. cloud-init replaces the SSH config. The host install overrides the image's DSA-first `ssh-keygen.service` command with `ssh-keygen -A` |
 | A security group description takes any text                                                                                 | No: only letters, digits, `_`, `.`, `@`, `-`, and spaces                                                                                                                                                                                                 |
@@ -355,14 +296,13 @@ Read-only quotes on 2026-10-10 in zone `HCM03-1C`, VND a month, 10% VAT included
 (owner, 2026-10-10). The host and storage total 1,047,880. Run
 `scripts/quote.sh` again before creating paid resources.
 
-| Resource                                       | Created by                                  | Quote                        |
-| ---------------------------------------------- | ------------------------------------------- | ---------------------------- |
-| vServer `s2-general-2x4` with 30 GB root SSD   | `tofu apply`                                | 663,600                      |
-| 20 GB SSD data volume                          | `tofu apply`                                | 64,000                       |
-| Disk encryption chosen at server create (CES)  | `tofu apply`                                | 170,280                      |
-| Floating IP                                    | `tofu apply`                                | 120,000                      |
-| vStorage Gold project, 30 GB                   | `storage create-project`, bought 2026-10-10 | 30,000                       |
-| Restore drill server and volume, while it runs | `scripts/restore-drill.sh`                  | the server's price, prorated |
+| Resource                                      | Created by                                  | Quote   |
+| --------------------------------------------- | ------------------------------------------- | ------- |
+| vServer `s2-general-2x4` with 30 GB root SSD  | `tofu apply`                                | 663,600 |
+| 20 GB SSD data volume                         | `tofu apply`                                | 64,000  |
+| Disk encryption chosen at server create (CES) | `tofu apply`                                | 170,280 |
+| Floating IP                                   | `tofu apply`                                | 120,000 |
+| vStorage Gold project, 30 GB                  | `storage create-project`, bought 2026-10-10 | 30,000  |
 
 The vStorage project has monthly auto-renew enabled since 2026-10-10. The next
 renewal is 2026-11-09. The owner checks the renewal and available balance so

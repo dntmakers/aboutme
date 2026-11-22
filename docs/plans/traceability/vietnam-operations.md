@@ -59,9 +59,13 @@ Those timings are consistent with a cached browser readiness failure, but they d
 
 ## Restore prerequisites
 
-An earlier read-only `storage.ListProjects` call with the management account returned HTTP 403 on 2026-10-13; its cause was not established. Later that day, with `vngcloud` updated to v0.81.1, the read-only `aboutme` profile listed one storage project, `aboutme` in HCM04, and read `aboutme-tfstate` versioning as `{"Enabled":false,"Status":"Off"}`. `deploy/vn/scripts/drill-state-proof.sh` then passed with that profile and the existing state key. Its probe `restore-drill/probes/71ec062a-5ac4-4d3f-b06d-9ff13e23e6d9.json` was created, refused a second conditional write, read back unchanged, and was deleted; the final check found it absent.
+An earlier read-only `storage.ListProjects` call with the management account returned HTTP 403 on 2026-10-13; its cause was not established. Later that day, with `vngcloud` updated to v0.81.1, the read-only `aboutme` profile listed one storage project, `aboutme` in HCM04, and read `aboutme-tfstate` versioning as `{"Enabled":false,"Status":"Off"}`. The state-bucket proof script (since removed with the cloud drill) then passed with that profile and the existing state key. Its probe `restore-drill/probes/71ec062a-5ac4-4d3f-b06d-9ff13e23e6d9.json` was created, refused a second conditional write, read back unchanged, and was deleted; the final check found it absent.
 
-The owner confirmed on 2026-10-13, from building the `vngcloud` CLI, that a GreenNode delete is permanent and leaves no recoverable copy. That settles the permanent-deletion requirement in the [restore design](../../design/restore-drill-networking.md). No restore resources were allocated, and backup restoration remains unproved.
+The owner confirmed on 2026-10-13, from building the `vngcloud` CLI, that a GreenNode delete is permanent and leaves no recoverable copy. That settles the permanent-deletion requirement in the earlier cloud restore design, since replaced by the [restore drill](../../design/restore-drill.md). No cloud restore resources were allocated.
+
+Record each laptop restore drill here with its date, backup label, recovery times, and pass or fail.
+
+- 2026-11-22: pass. Latest: set `20261116-000306F_20261122-000808D`, recovery 454 s, last replayed transaction 08:01:24 UTC that day, goose 22. Point-in-time 2026-11-21 08:02:01 UTC: set `20261116-000306F_20261121-070344I`, recovery 151 s, goose 21. 79 public tables counted in each; `aboutme_app` read passed.
 
 ## Supporting host metadata
 
