@@ -550,25 +550,33 @@ describe('private photo controls', () => {
     expect(retry).toHaveBeenCalledWith('retry-photo-1');
   });
 
-  it('disables retry until the resend finishes', async () => {
-    let finish!: () => void;
-    const retry = vi.fn(() => new Promise<void>((resolve) => {
-      finish = resolve;
-    }));
-    const wrapper = mount(PhotoPanel, {
-      props: {
-        record: retryRecord('media-busy', 1_000),
-        actions: { retry } as unknown as ResumeEditorActions,
-      },
+  it('disables retry while the queued resend is in flight', async () => {
+    const record = retryRecord('media-busy', 1_000);
+    const retry = vi.fn().mockResolvedValue(undefined);
+    let finishSend!: () => void;
+    const send = new Promise<void>((resolve) => {
+      finishSend = resolve;
     });
-
-    const button = wrapper.get('[data-action="retry-photo"]');
-    await button.trigger('click');
-    expect(button.attributes('disabled')).toBeDefined();
-    finish();
+    const actions = { retry } as unknown as ResumeEditorActions;
+    const wrapper = mount(PhotoPanel, { props: { record, actions } });
+    await wrapper.get('[data-action="retry-photo"]').trigger('click');
     await Promise.resolve();
-    await wrapper.vm.$nextTick();
-    expect(button.attributes('disabled')).toBeUndefined();
+    const sending = {
+      ...record,
+      attempt: { ...record.attempt!, sending: true },
+    } as ResumeRecord;
+    await wrapper.setProps({ record: sending });
+    expect(wrapper.get('[data-action="retry-photo"]').attributes('disabled'))
+      .toBeDefined();
+    wrapper.unmount();
+    const reopened = mount(PhotoPanel, { props: { record: sending, actions } });
+    expect(reopened.get('[data-action="retry-photo"]').attributes('disabled'))
+      .toBeDefined();
+    const completion = send.then(() => reopened.setProps({ record }));
+    finishSend();
+    await completion;
+    expect(reopened.get('[data-action="retry-photo"]').attributes('disabled'))
+      .toBeUndefined();
   });
 
   it('offers retry for a retryable photo delete', async () => {

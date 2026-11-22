@@ -232,10 +232,13 @@ export function createHistoryController(
     if (result.kind === 'not-found') {
       preview.value = { kind: 'gone' };
       selected.value = CURRENT_VERSION_ID;
+      await reload();
+      if (token !== previewToken) return;
       await nextTick();
       if (token !== previewToken) return;
-      focusRequest.value = { kind: 'current' };
-      await reload();
+      focusRequest.value = items().length === 0
+        ? { kind: 'empty' }
+        : { kind: 'current' };
       return;
     }
     if (result.kind === 'session-lost') {

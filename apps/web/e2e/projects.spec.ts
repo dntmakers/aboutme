@@ -1351,6 +1351,8 @@ test('both screens fit 320 px without horizontal overflow', async ({
     }]);
     await page.reload();
     await expect(page.locator('html')).toHaveAttribute('lang', locale);
+    await expect(page.getByTestId('account-menu')).toBeVisible();
+    await page.evaluate(() => document.fonts.ready);
     await expect.poll(() => page.getByTestId('app-shell').evaluate(
       (header) => header.scrollWidth <= header.clientWidth
         && document.documentElement.scrollWidth

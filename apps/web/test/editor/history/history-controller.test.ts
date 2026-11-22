@@ -114,7 +114,7 @@ describe('history controller', () => {
     api.list.mockResolvedValueOnce({ kind: 'ok', value: [] });
     await controller.select('a');
     expect(controller.preview.value.kind).toBe('gone');
-    expect(controller.focusRequest.value).toEqual({ kind: 'current' });
+    expect(controller.focusRequest.value).toEqual({ kind: 'empty' });
     await vi.waitFor(() => expect(controller.selected.value).toBe('current'));
   });
 
