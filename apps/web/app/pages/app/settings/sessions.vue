@@ -1,5 +1,8 @@
 <script setup lang="ts">
-import type { AuthProvider } from '../../../composables/useAuth';
+import {
+  leaveEndedSession,
+  type AuthProvider,
+} from '../../../composables/useAuth';
 import PasswordSettings from '../../../components/auth/PasswordSettings.vue';
 import ConnectedAgents from '../../../components/settings/ConnectedAgents.vue';
 import GitHubEvidence from '../../../components/settings/GitHubEvidence.vue';
@@ -74,6 +77,7 @@ const props = defineProps<{ now?: Date }>();
 const now = props.now ?? useNow();
 
 const route = useRoute();
+const router = useRouter();
 const {
   csrfToken,
   identities,
@@ -179,7 +183,7 @@ async function revokeAll(): Promise<void> {
     revokeError.value = 'all';
     return;
   }
-  await navigateTo('/login');
+  await leaveEndedSession(router);
 }
 
 const linkedProviders = computed(
@@ -346,8 +350,8 @@ const secondFactorActions: SecondFactorSettingsActions = {
 
 provide(SecondFactorSettingsActionsKey, secondFactorActions);
 
-function onAccountDeleted(): void {
-  if (import.meta.client) window.location.assign('/login');
+async function onAccountDeleted(): Promise<void> {
+  await leaveEndedSession(router);
 }
 
 async function onPasswordUpdated(): Promise<void> {

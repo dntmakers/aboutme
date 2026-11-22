@@ -1,11 +1,17 @@
-import { beforeEach, describe, expect, it } from 'vitest';
-import { mountSuspended, registerEndpoint } from '@nuxt/test-utils/runtime';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import {
+  mockNuxtImport,
+  mountSuspended,
+  registerEndpoint,
+} from '@nuxt/test-utils/runtime';
 import { flushPromises } from '@vue/test-utils';
 import { readRawBody, setResponseStatus } from 'h3';
 
 import SessionsPage from '../app/pages/app/settings/sessions.vue';
 import { registerCapabilities } from './support/capabilities';
 import { setSiteLocale } from './support/locale';
+
+mockNuxtImport('navigateTo', () => vi.fn());
 
 registerCapabilities();
 beforeEach(() => setSiteLocale('en'));
@@ -56,6 +62,9 @@ describe('sessions.vue privacy settings', () => {
       },
     });
 
+    const destroy = vi.spyOn(useRouter().options.history, 'destroy')
+      .mockImplementation(() => {});
+    const remove = vi.spyOn(Storage.prototype, 'removeItem');
     const wrapper = await mountSuspended(SessionsPage);
     await flushPromises();
     await wrapper.get('[data-testid="account-delete-action"]').trigger('click');
@@ -73,6 +82,17 @@ describe('sessions.vue privacy settings', () => {
     ).click();
     await flushPromises();
 
+    expect(destroy).toHaveBeenCalledOnce();
+    expect(remove).toHaveBeenCalledWith('vue-router:scroll');
+    expect(destroy.mock.invocationCallOrder[0]).toBeLessThan(
+      vi.mocked(navigateTo).mock.invocationCallOrder[0]!,
+    );
+    expect(remove.mock.invocationCallOrder[0]).toBeLessThan(
+      vi.mocked(navigateTo).mock.invocationCallOrder[0]!,
+    );
+    expect(vi.mocked(navigateTo)).toHaveBeenCalledWith('/login', {
+      external: true,
+    });
     expect(method).toBe('DELETE');
     expect(csrf).toBe('privacy-csrf-token');
     expect(contentType).toBeUndefined();
