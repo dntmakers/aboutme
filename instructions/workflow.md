@@ -7,17 +7,17 @@ The primary session is the manager. It plans, briefs, verifies each worker itsel
 |Work|Model|
 |-|-|
 |Design, documents, and decisions|The primary|
-|Implementation, troubleshooting with its fix, and QA proofs|Claude Sonnet as a subagent of the primary, or Codex Terra (`implementer`, `troubleshooter`, `qa`)|
-|Independent review and fix confirmation: code, architecture and contract designs, adversarial passes|A fresh Claude Opus subagent of the primary, or Codex Sol (`code_reviewer`, `design_reviewer`)|
-|Hard and complex work: security, concurrency or migration code, or a task that failed twice|Claude Fable or Codex Astra, never a default|
+|Implementation, troubleshooting with its fix, and QA proofs|Claude Sonnet or GPT Terra as a subagent of the primary|
+|Independent review and fix confirmation: code, architecture and contract designs, adversarial passes|A fresh Claude Opus or GPT Sol subagent of the primary|
+|Hard and complex work: security, concurrency or migration code, or a task that failed twice|Claude Fable or GPT Astra, never a default|
 |UI design and visual direction (owner, 2026-11-15)|Claude Opus or Fable as a subagent|
 |Exploration, searches, summaries, mechanical reading|An Explore subagent|
 
-Model routing is the owner's (2026-11-20). When Codex is out, Opus reviews, Sonnet implements, and Fable takes the hard and complex work. The reviewing model is never the one that implemented the work. Subagents each work in their own worktree, run bounded build, vet, lint, and test commands under the managed lock, and never change Git state or dispatch other agents.
+Model routing is the owner's (2026-11-20). The primary calls GPT models directly as Claude Code subagents and prefers that to the Codex CLI (owner, 2026-11-22); the CLI is the fallback when direct dispatch fails or the runtime model cannot be confirmed. When GPT is out, Opus reviews, Sonnet implements, and Fable takes the hard and complex work. The reviewing model is never the one that implemented the work. Subagents each work in their own worktree, run bounded build, vet, lint, and test commands under the managed lock, and never change Git state or dispatch other agents.
 
 The primary (owner, 2026-11-10) writes designs, ADR edits, and documentation itself, reviews them, and makes the decisions. Its documentation and prose need no independent review. An architecture or contract design and all code still get one independent review (owner, 2026-11-10). The reviewer is a separate agent with fresh context: it gets the code or design, the authorities and the check output, never the author's conclusions, and it never implements what it reviews.
 
-The owner chooses the primary session's model. Implementers work in any lane within the brief's owned paths. When the primary dispatches Codex, it uses `scripts/codex-agent.sh [--model <m>] [--effort <e>] [--search] <role> <worktree> <brief-file> <report-file>` with the role TOML defaults in `.codex/agents/`.
+The owner chooses the primary session's model. Implementers work in any lane within the brief's owned paths. When the primary falls back to the Codex CLI, it uses `scripts/codex-agent.sh [--model <m>] [--effort <e>] [--search] <role> <worktree> <brief-file> <report-file>` with the role TOML defaults in `.codex/agents/`.
 
 Design proposals cover benefits, trade-offs, dependencies, limits, alternatives, migration and loss rules, older-client behavior, security, size, and release order. The owner approves product-visible choices before code starts. UI specs give exact values, breakpoints, and copy in both languages. Research cites first-party sources and marks claims supported only by secondary sources as needing verification.
 
