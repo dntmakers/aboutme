@@ -6,6 +6,7 @@ import {
   type Response,
   type Route,
 } from '@playwright/test';
+import { pinEnglish } from './harness-lib';
 import {
   installPhotoSourceReadProbes,
   loginAsDevelopmentUser,
@@ -229,6 +230,7 @@ export async function provePhotoSessionPersistence(
     sessionWindow = observeSessionWindow(page, resumeID);
     state.editorDiagnosticStage = 'session-destroy-request';
     await destroySessionInSecondPage(reauthPage);
+    await pinEnglish(context);
     const editResponse = page.waitForResponse((response) => {
       const request = response.request();
       const url = new URL(response.url());

@@ -83,7 +83,7 @@ const guideLinkClass = computed(() => cn(
   linkClass,
   signedIn.value ? 'max-[64rem]:hidden' : 'max-[44rem]:hidden',
 ));
-const settingsLinkClass = cn(linkClass, 'max-sm:hidden');
+const settingsLinkClass = cn(linkClass, 'max-md:hidden');
 const viewsLinkClass = cn(linkClass, 'max-sm:hidden');
 const projectsLinkClass = cn(linkClass, 'max-md:hidden');
 </script>

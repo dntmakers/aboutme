@@ -1,4 +1,4 @@
-import { effectScope, nextTick, ref } from 'vue';
+import { effectScope, nextTick, ref, watch } from 'vue';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { useEditorHistory } from '../../../app/composables/useEditorHistory';
@@ -139,6 +139,10 @@ describe('useEditorHistory', () => {
     hook.openHistory();
     controller.open();
     await vi.waitFor(() => expect(controller.list.value.kind).toBe('ready'));
+    let regionAtFocus: string | undefined;
+    watch(controller.focusRequest, (request) => {
+      if (request !== null) regionAtFocus = narrowRegion.value;
+    }, { flush: 'sync' });
     api.read.mockImplementationOnce(async () => {
       await nextTick();
       await nextTick();
@@ -148,6 +152,7 @@ describe('useEditorHistory', () => {
     await vi.waitFor(() => expect(controller.selected.value).toBe('current'));
     await nextTick();
     expect(narrowRegion.value).toBe('editor');
+    expect(regionAtFocus).toBe('editor');
   });
 
   it('switches to Edit when a delete resets the selection', async () => {

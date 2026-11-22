@@ -119,9 +119,16 @@ function reopenCrop(): void {
   void props.actions.acceptLatest(conflict.id);
 }
 
-function retryPhoto(): void {
-  if (retryCommandId.value === undefined) return;
-  void props.actions.retry(retryCommandId.value);
+const retryPending = ref(false);
+
+async function retryPhoto(): Promise<void> {
+  if (retryCommandId.value === undefined || retryPending.value) return;
+  retryPending.value = true;
+  try {
+    await props.actions.retry(retryCommandId.value);
+  } finally {
+    retryPending.value = false;
+  }
 }
 
 function fileFrom(event: Event): File | undefined {
@@ -264,6 +271,7 @@ function isPhotoCommand(kind: string): boolean {
     <Button
       v-if="retryCommandId !== undefined && opaque === null"
       data-action="retry-photo"
+      :disabled="retryPending"
       size="sm"
       type="button"
       @click="retryPhoto"

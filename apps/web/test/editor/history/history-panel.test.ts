@@ -146,6 +146,23 @@ describe('History panel states', () => {
 });
 
 describe('Restore confirmation', () => {
+  it('explains and disables restore when blocked', async () => {
+    const { wrapper, controller } = await mountPanel(fakeApi([item('a')]));
+    controller.openRestore('a');
+    await flushPromises();
+    await wrapper.setProps({ restoreBlocked: true });
+    await flushPromises();
+    expect(dialog()!.textContent).toContain(
+      editorHistoryCopy.en.restoreBlocked,
+    );
+    const confirm = document.body.querySelector<HTMLButtonElement>(
+      '[data-action="restore-confirm"]',
+    )!;
+    expect(confirm.disabled).toBe(true);
+    await wrapper.setProps({ restoreBlocked: false });
+    await flushPromises();
+    expect(confirm.disabled).toBe(false);
+  });
   it('names the public link for a published resume', async () => {
     const record = fakeRecord();
     record.accepted.metadata = {

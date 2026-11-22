@@ -262,6 +262,7 @@ onBeforeUnmount(() => props.controller.close());
     <HistoryRestoreDialog
       :controller="controller"
       :record="record"
+      :restore-blocked="restoreBlocked === true"
     />
     <ConfirmDialog
       :busy="controller.remove.value?.phase === 'busy'"
