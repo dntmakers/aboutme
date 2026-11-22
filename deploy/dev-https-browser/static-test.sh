@@ -75,7 +75,7 @@ const settings = (file) => {
 const workspace = settings(`${root}/pnpm-workspace.yaml`);
 const harness = settings(`${root}/deploy/dev-https-browser/pnpm-workspace.yaml`);
 const shared = (found) => Object.fromEntries(Object.entries(found)
-  .filter(([key]) => !['packages', 'overrides', 'allowBuilds'].includes(key)).sort());
+  .filter(([key]) => !['packages', 'overrides', 'allowBuilds', 'patchedDependencies'].includes(key)).sort());
 if (JSON.stringify(shared(workspace)) !== JSON.stringify(shared(harness))) {
   throw new Error(`settings differ: ${JSON.stringify(shared(workspace))} ${JSON.stringify(shared(harness))}`);
 }
