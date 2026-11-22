@@ -160,16 +160,17 @@ until the stopped batch. An operator needing proven immediate revocation must
 use stopped reconciliation immediately, not wait for the nightly schedule. No
 live-deletion exemption or natural-expiry discriminator is introduced.
 
-Both Caddy modes currently share `crowdsec-bouncer-key` and host networking;
-their streaming cursors are not independent. Stopping both proves retirement of
-their old caches for deletion, but does not fix missed fresh bans when both
-serve concurrently. Do not create a new overlap or use maintenance as an outage
-mask. Independent registrations for concurrent modes require a separate key
-provisioning/rotation change outside this small patch. Resolve and prove that
-existing enforcement defect before claiming safe concurrent serving; neither
-batching nor the bouncer's
-[populated flag](crowdsec-retention-reload.md#pinned-bouncer-behavior) provides
-that proof or a startup-readiness guarantee.
+Serving Caddy alone runs the HTTP bouncer and consumes its stream. Maintenance
+Caddy keeps Coraza and the CrowdSec request feed but does not enforce CrowdSec
+bans or consume the stream, so overlapping modes cannot split stream deltas. A
+banned address not blocked by the host firewall reaches Coraza and can read the
+static 503 page and the intentionally public `/.well-known/deployment.json`; no
+other application content is reachable. Early rejection is lost during those
+minutes. The maintenance unit retains `crowdsec-bouncer-key` for rollback to
+older maintenance images that require it. Stopping both modes still retires
+caches from older images. The bouncer's
+[populated flag](crowdsec-retention-reload.md#pinned-bouncer-behavior) does not
+provide a startup-readiness guarantee.
 
 ## Escalation
 

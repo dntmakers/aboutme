@@ -121,7 +121,8 @@ case $seen in
 
     : >/run/caddy/crowdsec.global
     : >/run/caddy/crowdsec.handler
-    if [ -n "$crowdsec_url" ] || [ -n "$crowdsec_key_file" ] || [ -n "$crowdsec_key_set" ]; then
+    if [ "${MAINTENANCE:-0}" != 1 ] &&
+      { [ -n "$crowdsec_url" ] || [ -n "$crowdsec_key_file" ] || [ -n "$crowdsec_key_set" ]; }; then
       [ -n "$crowdsec_url" ] || fail "a CrowdSec key without CROWDSEC_API_URL"
       printf '%s\n' "$crowdsec_url" | grep -Eqx 'http://127\.0\.0\.1:[0-9]{1,5}/?' ||
         fail "CROWDSEC_API_URL must use the loopback HTTP API"
