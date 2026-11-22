@@ -137,7 +137,7 @@ export const legalVi: LegalCopy = {
           + 'chờ trong năm phút, ghi nhớ giao diện và ngôn ngữ bạn chọn, '
           + 'và, khi chủ CV yêu cầu đăng nhập để xem, cho phép bạn xem CV '
           + 'đó trong 7 ngày.',
-          'Bộ nhớ của trình duyệt chỉ dùng để ghi nhớ: đường dẫn quay '
+          'Bộ nhớ của trình duyệt dùng để ghi nhớ: đường dẫn quay '
           + 'lại sau khi bạn xác minh email (tối đa 24 giờ); chế độ xem '
           + 'trước (PDF hoặc web), mức thu phóng và độ rộng khung chỉnh '
           + 'sửa bạn chọn trong trình chỉnh sửa CV; việc bạn đã đóng lời '
@@ -145,6 +145,10 @@ export const legalVi: LegalCopy = {
           + 'duyệt hiện tại (sessionStorage), thời điểm một trang CV công '
           + 'khai tự tải lại lần cuối, để tránh tải lại liên tục. Không có '
           + 'dữ liệu nào trong số này được gửi đến máy chủ.',
+          'Trang web lưu vị trí cuộn trong bộ nhớ phiên của thẻ để khi bạn '
+          + 'quay lại, '
+          + 'trang hiện đúng chỗ cũ. Dữ liệu này không rời khỏi trình duyệt và '
+          + 'được xóa khi bạn đóng thẻ.',
         ],
       },
       {

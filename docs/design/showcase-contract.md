@@ -58,8 +58,11 @@ would publish them.
 
 Three filters combine: role (the ten roles), language (`vi`, `en`), and template
 (a preset ID or `custom`). They live in the page URL (`?role=backend&lang=vi`),
-so a filtered view is a plain link. The page stores nothing in cookies or
-browser storage, runs no counting script, and personalizes nothing.
+so a filtered view is a plain link. The page sets no cookies and stores no
+listing or filter data in browser storage. Vue Router stores scroll positions in
+the tab’s `sessionStorage` under `vue-router:scroll` for Back navigation; they
+stay in the browser and are cleared when the tab closes. The page runs no
+counting script and personalizes nothing.
 
 Twelve listings show per page (**Owner approval** S13), with Previous and Next
 links and `?page=`. Card images load lazily; a page of 12 moves at most about 3
