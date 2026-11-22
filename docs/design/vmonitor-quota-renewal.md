@@ -12,9 +12,9 @@ authorizes the sole cloud-credential exception.
 The [runbook](../runbooks/production.md#alarms) owns allowances and live expiry.
 Basic cannot auto-renew; free renewal opens in the last seven days [Synthetic].
 Renew as soon as the provider window opens, seven days before expiry (owner,
-2026-11-22). Successful renewal proves whether it extends expiry or starts a
-new term. Early renewal may lose unused days. A 409 window refusal
-is a sent, definite refusal, not proof of no send.
+2026-11-22). Successful renewal proves whether it extends expiry or starts a new
+term. Early renewal may lose unused days. A 409 window refusal is a sent,
+definite refusal, not proof of no send.
 
 After live validation, schedule `37 5,17 * * *` UTC. Compute time left from
 fresh provider reads and current UTC, never schedule timestamps or rounded days.
@@ -230,10 +230,10 @@ Release order:
    leaving the initial hold open. After it passes, the owner closes that hold
    and coordinates a due `action=renew`; no console renewal may overlap.
 4. For the runbook's current term, the provider window and the 7-day threshold
-   both start 2026-11-24T06:54:54Z. Keep the schedule absent until
-   successful due dispatch proves later expiry by read-back and records term
-   arithmetic. A dispatch before 2026-11-24T06:54:54Z must stay not due. Unconfirmed sends require
-   reconciliation, not another attempt.
+   both start 2026-11-24T06:54:54Z. Keep the schedule absent until successful
+   due dispatch proves later expiry by read-back and records term arithmetic. A
+   dispatch before 2026-11-24T06:54:54Z must stay not due. Unconfirmed sends
+   require reconciliation, not another attempt.
 5. Add the cron trigger in a separate reviewed, green change under the owner's
    standing approval. Keep coordinated manual renewal during rollout. Record
    live evidence and update the runbook's expiry after success.
