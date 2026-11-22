@@ -11,9 +11,10 @@ authorizes the sole cloud-credential exception.
 
 The [runbook](../runbooks/production.md#alarms) owns allowances and live expiry.
 Basic cannot auto-renew; free renewal opens in the last seven days [Synthetic].
-Use the last 72 hours until successful renewal proves whether it extends expiry
-or starts a new term. Early renewal may lose unused days. A 409 window refusal
-is a sent, definite refusal, not proof of no send.
+Renew as soon as the provider window opens, seven days before expiry (owner,
+2026-11-22). Successful renewal proves whether it extends expiry or starts a new
+term. Early renewal may lose unused days. A 409 window refusal is a sent,
+definite refusal, not proof of no send.
 
 After live validation, schedule `37 5,17 * * *` UTC. Compute time left from
 fresh provider reads and current UTC, never schedule timestamps or rounded days.
@@ -22,7 +23,7 @@ human. GitHub may delay/drop runs and disables idle public-repository schedules
 after 60 days [schedule]. Operators check enabled state and recent runs: silence
 sends no alert. The uptime workflow remains a backstop.
 
-Renew only when `0 < seconds-left <= 259200`, with a free quote. Synthetic has
+Renew only when `0 < seconds-left <= 604800`, with a free quote. Synthetic has
 no notification-quota action budget. Provider rate limits and refusal costs to
 Synthetic allowances remain unverified. Never retry renewal within a run.
 Uncertain sends hold later runs; confirmed renewal needs no human clearance.
@@ -190,7 +191,7 @@ exception implements ADR 0026; it does not grant secrets to `ci.yml` or its
 reusable jobs.
 
 Add `scripts/test/vmonitor-renew-test.sh`, with fake CLI, issue API, and clock.
-Cover 72/48-hour boundaries, delayed runs, invalid
+Cover 7-day and 48-hour boundaries, delayed runs, invalid
 action/read/status/class/time, expiry, mismatched reads, check-only behavior,
 and every [outcome/exit](vmonitor-quota-renewal-cli.md#script-and-cli-contract).
 Use pinned golden JSON and types. Reject table aliases, wrong casing, missing or
@@ -228,11 +229,11 @@ Release order:
 3. Run `action=check` on main with credentials. It may pass healthy reads while
    leaving the initial hold open. After it passes, the owner closes that hold
    and coordinates a due `action=renew`; no console renewal may overlap.
-4. For the runbook's current term, the provider window starts 2026-11-24; the
-   72-hour threshold starts 2026-11-28T06:54:54Z. Keep the schedule absent until
-   successful due dispatch proves later expiry by read-back and records term
-   arithmetic. November 24 dispatch must stay not due. Unconfirmed sends require
-   reconciliation, not another attempt.
+4. For the runbook's current term, the provider window and the 7-day threshold
+   both start 2026-11-24T06:54:54Z. Keep the schedule absent until successful
+   due dispatch proves later expiry by read-back and records term arithmetic. A
+   dispatch before 2026-11-24T06:54:54Z must stay not due. Unconfirmed sends
+   require reconciliation, not another attempt.
 5. Add the cron trigger in a separate reviewed, green change under the owner's
    standing approval. Keep coordinated manual renewal during rollout. Record
    live evidence and update the runbook's expiry after success.

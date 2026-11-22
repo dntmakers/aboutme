@@ -115,7 +115,7 @@ In `renew` mode, only a due quota with `RenewWindowOpen` true may invoke:
 
 ```sh
 vngcloud monitor renew-synthetic-quota \
-  --expected-end-time "$expiry" --max-days-left 3 --max-price 0 --output json
+  --expected-end-time "$expiry" --max-days-left 7 --max-price 0 --output json
 ```
 
 Open and verify the guard first. The CLI re-reads, refuses stale expected expiry
