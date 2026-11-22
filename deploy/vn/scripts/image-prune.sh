@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# shellcheck disable=SC2154
 
 prune_refs() {
   [[ -e $1 || -L $1 ]] || return 0
   grep -ohE 'ghcr\.io/(dannyota|dntmakers)/aboutme-[a-z]+@sha256:[0-9a-f]{64}' -- "$1" || (($? == 1))
 }
 
+# shellcheck disable=SC2154
 step_prune_images() {
   local refs='' out file ref id status listing removed=0 kept=0
   local -A keep=()

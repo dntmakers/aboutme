@@ -240,8 +240,8 @@ The repository uses S3 path-style addressing. One repository in HCM04 (owner,
 2026-10-10): the only other vStorage region is Hanoi, so a regional failure
 means waiting for HCM04 to return.
 
-The quarterly [restore drill](restore-drill.md) restores the latest backup and
-a point-in-time target from the previous day on the owner's laptop, using only
+The quarterly [restore drill](restore-drill.md) restores the latest backup and a
+point-in-time target from the previous day on the owner's laptop, using only
 off-host copies of the backup keys.
 
 ## Client metadata authorization
@@ -278,11 +278,11 @@ retain minimum-only checks unless their contract adds gates.
 
 The
 [notice host contract](crowdsec-privacy-notification.md#send-authority-and-restore-fence)
-owns mount checks, adoption, restore sequencing, and proof limits. Its
-`notice_restore` takes the fence before the workload lock; retained ownership
-and initializing adoption block app/ingestion starts, including db-setup, across
-reboot. PostgreSQL recovery and maintenance retain their existing gates. Restore
-releases only its own ownership, never reconciliation or send/activation gates.
+owns mount checks and adoption. Its `notice_restore` takes the fence before the
+workload lock; retained ownership and initializing adoption block app/ingestion
+starts, including db-setup, across reboot. PostgreSQL recovery and maintenance
+retain their existing gates. No restore controller exists: a cluster restore
+leaves the notice receipts and epoch untouched.
 
 [Release floors](release-floors.md) owns the tracked rebuilt-host floor and the
 schema floor that a breaking migration raises before it runs.

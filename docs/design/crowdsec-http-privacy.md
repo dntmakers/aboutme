@@ -170,11 +170,11 @@ CrowdSec rows, planner statistics, and registrations; row cleanup cannot remove
 old statistics or revoked identities. Neither automated restore nor retention
 resets this state, and a passing gate does not prove the database was never
 restored. The operator keeps every consumer stopped until the explicit
-[`--reset`](crowdsec-storage-migration.md) succeeds. Restore also revokes notice
-authority: complete the
-[notice reconciliation and activation rules](crowdsec-privacy-notification.md#send-authority-and-restore-fence)
-before consumer startup. Reset neither clears notice denial nor grants
-activation. Never rewind the application cluster for CrowdSec.
+[`--reset`](crowdsec-storage-migration.md) succeeds. No restore controller
+exists: a cluster restore leaves the notice receipts (`send.json`,
+`activation.json`) and epoch untouched. The notice campaign is complete, so the
+operator does nothing for the notice after a restore. Never rewind the
+application cluster for CrowdSec.
 
 ## Migration, loss, and release order
 

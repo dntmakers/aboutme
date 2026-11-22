@@ -17,9 +17,6 @@ die() {
 }
 say() { echo "install: $*"; }
 
-only=${ABOUTME_INSTALL_ONLY:-}
-case $only in "" | postgres) ;; *) die "invalid installation mode" ;; esac
-
 [ "$(id -u)" -eq 0 ] || die "run as root"
 [ $# -eq 1 ] || die "usage: install.sh <bundle-dir>"
 bundle=$(readlink -f "$1")
@@ -73,7 +70,7 @@ install -d -o root -g root -m 0755 "$lib" /run/aboutme
 for required in host/crowdsec-privacy-notice-host.sh host/workload-lock.sh \
   scripts/fence.sh scripts/deploy-safety.sh scripts/image-prune.sh scripts/deploy-host.sh \
   scripts/crowdsec-privacy-notice.sh; do
-  [[ -f $bundle/$required && ! -L $bundle/$required ]] || die "required notice helper is missing"
+  [[ -f $bundle/$required && ! -L $bundle/$required ]] || die "required host file is missing"
   install --compare -o root -g root -m 0755 "$bundle/$required" "$lib/${required##*/}"
 done
 "$lib/crowdsec-privacy-notice-host.sh" initialize || die "invalid_state"
@@ -203,7 +200,7 @@ install_admission_transition() (
 )
 
 install_postgresql_config() {
-  local src=$1 action=$2 changed='' file mode
+  local src=$1 changed='' file mode
   install -d -o postgres -g postgres -m 0755 /etc/postgresql/18/main/conf.d || return 1
   for file in pg_hba.conf pg_ident.conf conf.d/90-aboutme.conf; do
     mode=0640
@@ -213,7 +210,7 @@ install_postgresql_config() {
       "$src/$file" "/etc/postgresql/18/main/$file") || return 1
   done
   if [[ -n $changed ]]; then
-    timeout --kill-after=1s 10 systemctl "$action" postgresql@18-main.service || return 1
+    timeout --kill-after=1s 10 systemctl reload postgresql@18-main.service || return 1
   fi
 }
 
@@ -331,22 +328,6 @@ echo "deb [signed-by=/etc/apt/keyrings/postgresql.asc] https://apt-archive.postg
   >>/etc/apt/sources.list.d/pgdg.list
 say "PGDG repository in place"
 
-if [ "$only" = postgres ]; then
-  apt-get update -qq
-  install_pinned --no-install-recommends "postgresql-common=$POSTGRESQL_COMMON_VERSION" "postgresql-client-common=$POSTGRESQL_COMMON_VERSION"
-  chown postgres:postgres /srv/data/postgresql
-  chmod 0700 /srv/data/postgresql
-  chown root:postgres /srv/data/pgbackrest-conf
-  chmod 0750 /srv/data/pgbackrest-conf
-  install_pinned --no-install-recommends "postgresql-18=$POSTGRESQL_VERSION" "postgresql-client-18=$POSTGRESQL_VERSION" \
-    "libpq5=$POSTGRESQL_VERSION" "pgbackrest=$PGBACKREST_VERSION"
-  install --compare -m 0644 "$bundle/host/etc/pgbackrest/pgbackrest.conf" /etc/pgbackrest/pgbackrest.conf
-  install_admission_transition install_postgresql_config \
-    "$bundle/host/etc/postgresql/18/main" restart
-  say "PostgreSQL and pgBackRest installed"
-  exit 0
-fi
-
 install_key "$bundle/host/keys/crowdsec.asc" "$CROWDSEC_SIGNER_FPR" "$tmp/crowdsec.asc"
 gpg --dearmor --yes -o /etc/apt/keyrings/crowdsec.gpg "$tmp/crowdsec.asc"
 echo "deb [signed-by=/etc/apt/keyrings/crowdsec.gpg] https://packagecloud.io/crowdsec/crowdsec/ubuntu noble main" \
@@ -439,7 +420,7 @@ crowdsec_install_closed=yes
 install_admission_transition --shared-fence install_crowdsec_bootstrap_retention || die "crowdsec_retention_refused"
 
 # Copy and reload peer policy under the same exclusion, preserving the epoch.
-install_admission_transition install_postgresql_config "$etc/postgresql/18/main" reload
+install_admission_transition install_postgresql_config "$etc/postgresql/18/main"
 [[ $(findmnt -n -o FSTYPE -T /run/aboutme) == tmpfs ]] || die "CrowdSec diagnostics require tmpfs"
 install -d -o root -g root -m 0700 /run/aboutme/crowdsec
 "$lib/crowdsec-window-check.sh"
