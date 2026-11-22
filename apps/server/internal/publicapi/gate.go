@@ -213,7 +213,7 @@ func gateHTMLRejection(source []byte, envelope directrender.GateRenderRequest, o
 				}
 				anchorCount++
 			case "title":
-				if title != nil || len(node.Attr) != 0 || textNode(node) != envelope.PageTitle {
+				if title != nil || len(node.Attr) != 0 || textNode(node) != parsedLineEndings(envelope.PageTitle) {
 					reject("title")
 					return
 				}

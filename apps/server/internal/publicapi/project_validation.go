@@ -145,7 +145,7 @@ func (v *projectValidator) visitElement(node *html.Node) {
 		if node.Namespace != "" {
 			break
 		}
-		if v.title != nil || len(node.Attr) != 0 || textNode(node) != v.want.title {
+		if v.title != nil || len(node.Attr) != 0 || textNode(node) != parsedLineEndings(v.want.title) {
 			v.reject("title")
 		}
 		v.title = node

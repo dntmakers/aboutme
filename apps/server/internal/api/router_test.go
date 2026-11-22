@@ -52,6 +52,7 @@ type publicRoutesStub struct {
 }
 
 func (s publicRoutesStub) Recognizes(path string) bool { return s.recognizes(path) }
+func (s publicRoutesStub) RouteClass(string) string    { return "public_stub" }
 func (s publicRoutesStub) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	s.handler.ServeHTTP(w, r)
 }
@@ -705,5 +706,60 @@ func TestRouter_Readyz_FailingPingIsAlsoCachedForTTL(t *testing.T) {
 	}
 	if got := pinger.callCount(); got != 2 {
 		t.Errorf("after TTL expiry: real Ping() calls = %d, want 2 (recovery must be checked again)", got)
+	}
+}
+
+func TestRouterLogsThePublicRouteClassNotThePath(t *testing.T) {
+	t.Parallel()
+
+	var logs bytes.Buffer
+	public := publicRoutesStub{
+		recognizes: func(path string) bool { return path == "/guessed-slug" },
+		handler:    http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusNotFound) }),
+	}
+	handler := api.New(slog.New(slog.NewJSONHandler(&logs, nil)), nil, api.Options{}, public)
+
+	for _, path := range []string{"/guessed-slug", "/other"} {
+		handler.ServeHTTP(httptest.NewRecorder(), httptest.NewRequestWithContext(context.Background(), http.MethodGet, path, nil))
+	}
+
+	lines := strings.Split(strings.TrimSpace(logs.String()), "\n")
+	if len(lines) != 2 {
+		t.Fatalf("log lines = %d, want 2:\n%s", len(lines), logs.String())
+	}
+	var public0, other map[string]any
+	if err := json.Unmarshal([]byte(lines[0]), &public0); err != nil {
+		t.Fatal(err)
+	}
+	if err := json.Unmarshal([]byte(lines[1]), &other); err != nil {
+		t.Fatal(err)
+	}
+	if public0["route"] != "public_stub" {
+		t.Errorf("public route = %v, want public_stub", public0["route"])
+	}
+	if _, found := public0["path"]; found || strings.Contains(lines[0], "guessed-slug") {
+		t.Errorf("public log line carries the path: %s", lines[0])
+	}
+	if other["route"] != "not_found" {
+		t.Errorf("other route = %v, want not_found", other["route"])
+	}
+}
+
+func TestRouterLogsNotFoundWithoutThePath(t *testing.T) {
+	t.Parallel()
+
+	for _, path := range []string{"/%61da-lovelace", "/api/v1/public/resumes/a/extra", "/guessed-slug/child"} {
+		var logs bytes.Buffer
+		handler := api.New(slog.New(slog.NewTextHandler(&logs, nil)), nil, api.Options{}, nil)
+		request := httptest.NewRequestWithContext(context.Background(), http.MethodGet, path, nil)
+		recorder := httptest.NewRecorder()
+		handler.ServeHTTP(recorder, request)
+		if recorder.Code != http.StatusNotFound {
+			t.Fatalf("%s: status = %d, want 404", path, recorder.Code)
+		}
+		got := logs.String()
+		if !strings.Contains(got, "route=not_found") || strings.Contains(got, "path=") || strings.Contains(got, "lovelace") || strings.Contains(got, "guessed") {
+			t.Errorf("%s: log = %q, want route=not_found and no path", path, got)
+		}
 	}
 }

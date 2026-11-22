@@ -250,6 +250,10 @@ func (s *Scheduler) process(ctx context.Context, next check) {
 	case err == nil, errors.Is(err, ErrStale), errors.Is(err, ErrNotLive):
 		s.settled(next.resumeID)
 	case ctx.Err() == nil:
+		if _, live, liveErr := s.store.Live(ctx, next.resumeID); liveErr == nil && !live {
+			s.settled(next.resumeID)
+			return
+		}
 		s.retry(next.resumeID, "build_failed")
 	}
 }

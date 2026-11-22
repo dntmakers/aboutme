@@ -196,3 +196,25 @@ func TestProjectHTMLRejection_ImageFallsBackToTheResumeShareImage(t *testing.T) 
 		t.Fatalf("rejection = %q, want meta_og_image for a card the request does not name", rule)
 	}
 }
+
+func TestProjectHTMLRejection_TitleMatchesTheParsedLineEndings(t *testing.T) {
+	origin := mustPublicOrigin(t)
+	tc := readProjectCorpus(t)["project-en-every-field"]
+	const title = "Analytical Engine notes · Ada Lovelace"
+	for name, withBreak := range map[string]string{
+		"carriage return":           "Analytical\rEngine notes · Ada Lovelace",
+		"carriage return line feed": "Analytical\r\nEngine notes · Ada Lovelace",
+	} {
+		t.Run(name, func(t *testing.T) {
+			request := projectCorpusPage(t, tc)
+			if request.PageTitle != title {
+				t.Fatalf("corpus title = %q, want %q", request.PageTitle, title)
+			}
+			request.PageTitle = withBreak
+			page := replaceOnce(tc.HTML, "<title>"+title+"</title>", "<title>"+withBreak+"</title>")
+			if rule := projectHTMLRejection([]byte(page), request, origin); rule != "" {
+				t.Fatalf("rejection = %q, want the page accepted", rule)
+			}
+		})
+	}
+}
