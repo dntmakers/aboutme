@@ -183,15 +183,6 @@ nothing in production. Pass a local `host-secrets.age` path, or set
 [restore drill design](../../docs/design/restore-drill.md) owns the procedure,
 cadence, and record.
 
-## Cutover prerequisites
-
-The AWS-to-Vietnam data move reference is separate from host installation.
-Before `preflight`, the Vietnam host must already serve maintenance with its
-server stopped. Preflight stops job timers and active jobs and checks that
-state; it does not start maintenance. AWS must also serve maintenance with its
-app and schedules stopped. The AWS stack is not deployed, so the script cannot
-run against the current infrastructure.
-
 ## Reboot
 
 Use the GreenNode API to reboot. An in-guest `systemctl reboot` hung once.

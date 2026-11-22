@@ -196,9 +196,10 @@ a lease by hand.
 
 ## Reset after a cluster restore
 
-Keep consumers stopped after restoring the PostgreSQL cluster. Complete the
-application and privacy-notice restore procedure under its existing owner.
-Before attack protection resumes, run:
+Keep consumers stopped after restoring the PostgreSQL cluster. No restore
+controller exists, and a restore leaves the privacy-notice receipts
+(`send.json`, `activation.json`) and epoch untouched. The notice campaign is
+complete, so do nothing for the notice. Before attack protection resumes, run:
 
 ```sh
 sudo /usr/local/lib/aboutme/crowdsec-migrate.sh --reset

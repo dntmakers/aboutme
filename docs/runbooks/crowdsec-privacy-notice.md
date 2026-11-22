@@ -48,9 +48,8 @@ adoption may resume only its recorded operation from the same reviewed bundle.
 Do not install first, downgrade helpers, or change pins to force eligibility.
 
 A new app-absent host uses ordinary installation, which runs `initialize`; skip
-`adopt` there. PostgreSQL-only installation does not authorize application
-reconciliation. Both bootstrap paths leave reconciliation required and receipts
-absent. Installation preserves that state.
+`adopt` there. Bootstrap leaves reconciliation required and receipts absent.
+Installation preserves that state.
 
 Deploy the compatible release using the existing deployer:
 

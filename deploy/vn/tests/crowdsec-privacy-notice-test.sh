@@ -14,11 +14,12 @@ grep -Fq 'authorize-send' "$wrapper" || fail 'explicit send authority action'; g
 grep -Fq 'publication_date' "$wrapper" || fail 'owner publication validation'; grep -Fq 'expected_count' "$wrapper" || fail 'owner aggregate validation'
 grep -Fq 'accepted_count' "$wrapper" || fail 'owner completion validation'; grep -Fq 'capture' "$wrapper" || fail 'owner capture interruption marker'
 grep -Fq 'adopt' "$primitive" || fail 'explicit legacy adoption action'; installer=$root/deploy/vn/host/install.sh
-awk '
-  /crowdsec-privacy-notice-host.sh/ && !helper {helper=NR}; /workload-lock.sh/ && !workload {workload=NR}
-  /fence.sh/ && !fence {fence=NR}
-  /if \[ "\$only" = postgres \]/ {postgres=NR}; END {exit !(helper && workload && fence && postgres && helper<postgres && workload<postgres && fence<postgres)}
-' "$installer" || fail 'postgres installer skipped shared dependencies'
+required_block=$(sed -n '/^for required in /,/; do$/p' "$installer")
+for name in host/crowdsec-privacy-notice-host.sh host/workload-lock.sh scripts/fence.sh; do
+  grep -qF "$name" <<<"$required_block" || fail "installer skipped $name"
+done
+[[ $(grep -n '^for required in ' "$installer" | head -n1 | cut -d: -f1) -lt $(grep -n '^apt-get install' "$installer" | head -n1 | cut -d: -f1) ]] ||
+  fail 'installer installs packages before its required helpers'
 work=$(mktemp -d /run/aboutme-notice-test.XXXXXX)
 stub() { local target=$1; { printf '#!/usr/bin/env bash\n'; cat; } >"$target"; chmod 0755 "$target"; }
 loops=()
@@ -82,19 +83,6 @@ if [[ $name == mv && ${*: -1} == /usr/local/lib/aboutme/crowdsec-privacy-notice-
   [[ $(stat -c '%u:%g:%a:%h' "$replacement") == 0:0:755:1 ]] || exit 1
   [[ $(cat "$NOTICE_FIXTURE/last-file-sync") == "$replacement" ]] || exit 1
 fi
-if [[ $name == mv && ${*: -1} == /var/lib/aboutme/fence.json && ${NOTICE_RELEASE_FAULT:-none} != none ]]; then
-  replacement=${@: -2:1}
-  if jq -e 'has("notice_authority") and (.operation_id // null)==null' "$replacement" >/dev/null 2>&1; then
-    grep -qxF helper-joined "$NOTICE_FIXTURE/order" || exit 1; sha256sum /var/lib/aboutme/privacy-notice/epoch | cut -d' ' -f1 >"$NOTICE_FIXTURE/release-epoch-hash"
-    printf 'release-attempt\n' >>"$NOTICE_FIXTURE/release-attempts"
-    case $NOTICE_RELEASE_FAULT in
-      before-store) exit 1 ;;
-      after-rename) /usr/bin/mv "$@"; exit 1 ;;
-      after-sync | lost-response) touch "$NOTICE_FIXTURE/release-renamed" ;;
-      *) exit 1 ;;
-    esac
-  fi
-fi
 case ${*: -1} in
   */privacy-notice) printf '%s directory\n' "$name" >>"$NOTICE_FIXTURE/order" ;;
   */epoch | */send.json | */activation.json | */restore-reconciliation)
@@ -102,20 +90,11 @@ case ${*: -1} in
   *) printf '%s temporary\n' "$name" >>"$NOTICE_FIXTURE/order" ;;
 esac
 if [[ $name == sync ]]; then
-  if [[ ${*: -1} == /var/lib/aboutme && -f $NOTICE_FIXTURE/release-renamed ]]; then
-    /usr/bin/sync "$@"
-    case ${NOTICE_RELEASE_FAULT:-none} in
-      after-sync) exit 1 ;;
-      lost-response) kill -TERM "$PPID"; exit 1 ;;
-    esac
-  fi
   n=$(cat "$NOTICE_FIXTURE/sync-count" 2>/dev/null || printf 0); n=$((n + 1))
   printf '%s\n' "$n" >"$NOTICE_FIXTURE/sync-count"
   if [[ ${*: -1} == /var/lib/aboutme/privacy-notice* ]]; then
     [[ -e $NOTICE_FIXTURE/first-authority-sync ]] || printf '%s\n' "$n" >"$NOTICE_FIXTURE/first-authority-sync"; printf '%s\n' "$n" >"$NOTICE_FIXTURE/last-authority-sync"
   fi
-  [[ $n != "${NOTICE_FAIL_SYNC:-0}" ]] || { printf 'fixture_failure\n' >&2; exit 1; }
-  if [[ $n == "${NOTICE_CRASH_SYNC:-0}" ]]; then kill -KILL "$PPID"; exit 137; fi
   if [[ ${*: -1} == /var/lib/aboutme/privacy-notice ]]; then
     /usr/bin/rm -f "$NOTICE_FIXTURE/await-directory-sync"
   elif [[ -f ${*: -1} && ! -L ${*: -1} ]]; then
@@ -125,7 +104,7 @@ fi
 if [[ $name == mv && ${*: -1} == /var/lib/aboutme/privacy-notice/* ]]; then
   source_file=${@: -2:1}; [[ $(dirname "$source_file") == /var/lib/aboutme/privacy-notice ]] || exit 1
   [[ $(stat -c '%u:%g:%a:%h' "$source_file") == 0:0:444:1 ]] || exit 1; [[ -f $NOTICE_FIXTURE/last-file-sync && $(cat "$NOTICE_FIXTURE/last-file-sync") == "$source_file" ]] || exit 1
-  [[ ! -e $NOTICE_FIXTURE/await-directory-sync ]] || exit 1; [[ ${NOTICE_FAIL_MOVE:-0} == 0 ]] || exit 1
+  [[ ! -e $NOTICE_FIXTURE/await-directory-sync ]] || exit 1
   touch "$NOTICE_FIXTURE/await-directory-sync"
 fi
 if [[ $name == rm && ${NOTICE_CLAIMED:-0} == 1 && $* == *send.json* ]]; then
@@ -292,8 +271,6 @@ refuse "$host" initialize extra; refuse "$host" pre-restore extra
 for action in pre-restore postcheck finish resume-owned-operation; do
   refuse bash "$wrapper" "$action"
 done
-for function in notice_restore_begin notice_restore_pre_restore notice_restore_postcheck notice_restore_finish; do
-  grep -Eq "^$function\(\)[[:space:]]*\\{" "$primitive" || fail 'missing source-only boundary'; refuse bash -c 'source "$1"; "$2" extra' bash "$host" "$function"; done
 for label in absent duplicate failure; do
   NOTICE_LABEL=$label refuse "$host" initialize; [[ ! -e /var/lib/aboutme/fence.json && ! -e $authority ]] || fail 'label failure touched state'
 done
@@ -370,7 +347,10 @@ if [[ ${NOTICE_ADOPTION:-0} == 1 ]]; then
   case ${*: -1} in
     /usr/local/lib/aboutme/fence.sh | /usr/local/lib/aboutme/deploy-host.sh | /usr/local/lib/aboutme/deploy-safety.sh | /usr/local/lib/aboutme/image-prune.sh)
       if [[ ${*: -1} == /usr/local/lib/aboutme/deploy-host.sh ]]; then
-        cmp -s "$NOTICE_FIXTURE/reviewed/image-prune.sh" /usr/local/lib/aboutme/image-prune.sh || exit 1
+        cmp -s "$NOTICE_FIXTURE/reviewed/image-prune.sh" /usr/local/lib/aboutme/image-prune.sh || {
+          printf 'deploy-host installed before image-prune matched\n' >>"$NOTICE_FIXTURE/violations"
+          exit 1
+        }
       fi
       cmp -s "$NOTICE_FIXTURE/reviewed/crowdsec-privacy-notice-host.sh" /usr/local/lib/aboutme/crowdsec-privacy-notice-host.sh || exit 1
       jq -e '.notice_authority.state=="initializing" and .operation_kind=="cutover" and .notice_authority.operation_id==.operation_id' /var/lib/aboutme/fence.json >/dev/null || exit 1
@@ -435,6 +415,7 @@ for boundary in before:fence.sh after:fence.sh after:deploy-host.sh after:deploy
   [[ ! -e /var/lib/aboutme/cutover-mutation.json && -f $authority/restore-reconciliation ]] || fail 'resumed adoption did not settle denial'
   for name in fence deploy-host deploy-safety image-prune; do cmp -s "$work/reviewed/$name.sh" "$work/lib/$name.sh" || fail 'resumed adoption retained old helper'; done
 done
+[[ ! -s $work/violations ]] || fail "$(cat "$work/violations")"
 for field in "${legacy_fields[@]}"; do export "$field=caller_override"; done
 refuse bash "$adopt" adopt
 for field in "${legacy_fields[@]}"; do unset "$field"; done
