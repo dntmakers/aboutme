@@ -1,4 +1,4 @@
-import { ref, type Ref } from 'vue';
+import { nextTick, ref, type Ref } from 'vue';
 
 import type { useAuth } from '../composables/useAuth';
 import type { useResumeStore } from '../stores/resumes';
@@ -231,9 +231,14 @@ export function createHistoryController(
     }
     if (result.kind === 'not-found') {
       preview.value = { kind: 'gone' };
-      focusRequest.value = { kind: 'current' };
+      selected.value = CURRENT_VERSION_ID;
       await reload();
-      if (token === previewToken) selected.value = CURRENT_VERSION_ID;
+      if (token !== previewToken) return;
+      await nextTick();
+      if (token !== previewToken) return;
+      focusRequest.value = items().length === 0
+        ? { kind: 'empty' }
+        : { kind: 'current' };
       return;
     }
     if (result.kind === 'session-lost') {

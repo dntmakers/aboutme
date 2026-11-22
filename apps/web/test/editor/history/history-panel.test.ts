@@ -59,6 +59,16 @@ describe('History panel states', () => {
     expect(wrapper.find('[data-history-count]').exists()).toBe(false);
   });
 
+  it('focuses the empty heading when the last version is gone', async () => {
+    const api = fakeApi([item('a')]);
+    const { wrapper, controller } = await mountPanel(api);
+    api.read.mockResolvedValueOnce({ kind: 'not-found' } as never);
+    api.list.mockResolvedValueOnce({ kind: 'ok', value: [] });
+    await controller.select('a');
+    await flushPromises();
+    expect(document.activeElement).toBe(wrapper.get('h3').element);
+  });
+
   it('shows a load failure with Try again', async () => {
     const api = fakeApi();
     api.list.mockResolvedValue({ kind: 'failed' } as never);
@@ -146,6 +156,23 @@ describe('History panel states', () => {
 });
 
 describe('Restore confirmation', () => {
+  it('explains and disables restore when blocked', async () => {
+    const { wrapper, controller } = await mountPanel(fakeApi([item('a')]));
+    controller.openRestore('a');
+    await flushPromises();
+    await wrapper.setProps({ restoreBlocked: true });
+    await flushPromises();
+    expect(dialog()!.textContent).toContain(
+      editorHistoryCopy.en.restoreBlocked,
+    );
+    const confirm = document.body.querySelector<HTMLButtonElement>(
+      '[data-action="restore-confirm"]',
+    )!;
+    expect(confirm.disabled).toBe(true);
+    await wrapper.setProps({ restoreBlocked: false });
+    await flushPromises();
+    expect(confirm.disabled).toBe(false);
+  });
   it('names the public link for a published resume', async () => {
     const record = fakeRecord();
     record.accepted.metadata = {

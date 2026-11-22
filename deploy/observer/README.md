@@ -135,7 +135,8 @@ regenerate a golden file after an intentional change:
 cd deploy/observer && go test ./internal/document/... -run TestExamples -update
 ```
 
-The frontend reads these files by name, so the set is stable:
+The observer examples cover these states; frontend tests use separate fixtures
+in `apps/web/e2e/fixtures/deployment/`:
 
 - `verified.json`: every component runs one verified digest of the same release.
 - `verified-with-maintenance.json`: as above, with a maintenance task also

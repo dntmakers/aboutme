@@ -1345,6 +1345,24 @@ test('both screens fit 320 px without horizontal overflow', async ({
     (main) => main.scrollWidth <= main.clientWidth
       && main.getBoundingClientRect().right <= innerWidth + 1),
   'Fit at 640px.').toBe(true);
+  for (const locale of ['en', 'vi']) {
+    await page.context().addCookies([{
+      name: 'aboutme-locale', value: locale, url: 'http://127.0.0.1:20092',
+    }]);
+    await page.reload();
+    await expect(page.locator('html')).toHaveAttribute('lang', locale);
+    await expect(page.getByTestId('account-menu')).toBeVisible();
+    await page.evaluate(() => document.fonts.ready);
+    await expect.poll(() => page.getByTestId('app-shell').evaluate(
+      (header) => header.scrollWidth <= header.clientWidth
+        && document.documentElement.scrollWidth
+        <= document.documentElement.clientWidth),
+    `Header fit at 640px in ${locale}.`).toBe(true);
+  }
+  await page.context().addCookies([{
+    name: 'aboutme-locale', value: 'en', url: 'http://127.0.0.1:20092',
+  }]);
+  await page.reload();
   const link = page.getByTestId('app-shell')
     .getByRole('link', { name: 'Projects', exact: true });
   for (const width of [700, 768, 1024]) {

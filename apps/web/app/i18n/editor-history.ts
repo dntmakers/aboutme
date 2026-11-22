@@ -94,7 +94,9 @@ export const editorHistoryCopy: WorkspaceCopy<EditorHistoryCopy> = {
       + 'đã bị xóa.',
     backToEditing: 'Quay lại chỉnh sửa',
     restore: 'Khôi phục',
-    restoreBlocked: 'Bạn có thể khôi phục khi mọi thay đổi đã được lưu.',
+    restoreBlocked:
+      'Hãy lưu hoặc giải quyết các thay đổi và chờ kiểm tra phiên thành công '
+      + 'trước khi khôi phục.',
     deleteVersionLabel: 'Xóa phiên bản này',
     restoreTitle: (time) => `Khôi phục phiên bản lúc ${time}?`,
     restorePublic: (link) =>
@@ -185,7 +187,9 @@ export const editorHistoryCopy: WorkspaceCopy<EditorHistoryCopy> = {
       + 'deleted.',
     backToEditing: 'Back to editing',
     restore: 'Restore',
-    restoreBlocked: 'You can restore once every change is saved.',
+    restoreBlocked:
+      'Save or resolve changes and wait for the session check to succeed '
+      + 'before restoring.',
     deleteVersionLabel: 'Delete this version',
     restoreTitle: (time) => `Restore the version from ${time}?`,
     restorePublic: (link) =>

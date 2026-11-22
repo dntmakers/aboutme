@@ -32,12 +32,12 @@ Signed-in navigation also shows Resumes, Settings, and an account menu. A
 Projects link (“Dự án”) follows Resumes, hides below 768 px, and is also in the
 account menu above Views ([projects workspace](projects.md#navigation)). The
 account menu contains Settings, theme switching, and Log out. On signed-in
-screens below 640 px, the direct Library, Community, and Settings links are
-hidden; Settings remains in the account menu. The guide link hides below 44 rem
-signed out and below 64 rem signed in, where the signed-in bar also carries
-Resumes, Views, and Settings. On localized routes, the shell adds the Vietnamese
-and English toggle. Below 640 px its visible labels shorten to VI and EN while
-their accessible names remain complete.
+screens below 640 px, the direct Library and Community links are hidden. The
+Settings link hides below 768 px and remains in the account menu. The guide link
+hides below 44 rem signed out and below 64 rem signed in, where the signed-in
+bar also carries Resumes, Views, and Settings. On localized routes, the shell
+adds the Vietnamese and English toggle. Below 640 px its visible labels shorten
+to VI and EN while their accessible names remain complete.
 
 Public pages end with the home page's footer band: the Library, template pages,
 the showcase, the MCP guide, the legal pages, the verify page, the account

@@ -90,8 +90,9 @@ A version bar above the preview's scroll area, not scrolling, holds:
 While the version loads, the sheet area shows `LoadingState` with
 `previewLoading` and the bar's buttons are disabled. A failed read shows
 `previewFailed` with Try again; a 404 shows `versionGone`, reloads the list, and
-selects Current version. Back to editing leaves History: the inspector returns
-to the tool open before it, and narrow layouts switch to Edit.
+selects Current version. After the list reloads and Edit shows, focus moves to
+Current version or the empty heading. Back to editing leaves History: the
+inspector returns to the tool open before it, and narrow layouts switch to Edit.
 
 ## Restore
 
@@ -107,10 +108,11 @@ Restore opens an alert dialog under the
    field does.
 4. `restoreKept`, then `restoreUndoNote`.
 
-Actions are Cancel (outline) and Restore (main pill); focus starts on Cancel.
-Each confirmation sends `If-Match` with the accepted revision and a new
-idempotency key; a retry after a network failure reuses both. Alerts are error
-`StatusBanner`s 16 px above the actions.
+Actions are Cancel (outline) and Restore (main pill); focus starts on Cancel. If
+the editor becomes blocked while the dialog is open, Restore is disabled and
+`restoreBlocked` explains why. Each confirmation sends `If-Match` with the
+accepted revision and a new idempotency key; a retry after a network failure
+reuses both. Alerts are error `StatusBanner`s 16 px above the actions.
 
 | Outcome                      | Dialog and editor                                                                                                         |
 | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
@@ -215,7 +217,7 @@ tool and the panel. Try again, Close, and the relative words reuse
 | `versionGone`                         | Phiên bản này không còn trong lịch sử. Có thể nó đã quá 30 ngày hoặc đã bị xóa.                                                                      | This version is no longer in history. It may be over 30 days old or deleted.                                                                                             |
 | `backToEditing`                       | Quay lại chỉnh sửa                                                                                                                                   | Back to editing                                                                                                                                                          |
 | `restore`                             | Khôi phục                                                                                                                                            | Restore                                                                                                                                                                  |
-| `restoreBlocked`                      | Bạn có thể khôi phục khi mọi thay đổi đã được lưu.                                                                                                   | You can restore once every change is saved.                                                                                                                              |
+| `restoreBlocked`                      | Hãy lưu hoặc giải quyết các thay đổi và chờ kiểm tra phiên thành công trước khi khôi phục.                                                           | Save or resolve changes and wait for the session check to succeed before restoring.                                                                                      |
 | `deleteVersionLabel`                  | Xóa phiên bản này                                                                                                                                    | Delete this version                                                                                                                                                      |
 | `restoreTitle(time)`                  | Khôi phục phiên bản lúc {time}?                                                                                                                      | Restore the version from {time}?                                                                                                                                         |
 | `restorePublic(link)`                 | CV này đang công khai. Người mở {link} sẽ thấy phiên bản này ngay khi bạn khôi phục.                                                                 | This resume is public. Anyone who opens {link} sees this version as soon as you restore it.                                                                              |

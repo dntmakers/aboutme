@@ -264,6 +264,8 @@ function isPhotoCommand(kind: string): boolean {
     <Button
       v-if="retryCommandId !== undefined && opaque === null"
       data-action="retry-photo"
+      :disabled="record.attempt?.kind === 'retry-later'
+        && record.attempt.sending === true"
       size="sm"
       type="button"
       @click="retryPhoto"
