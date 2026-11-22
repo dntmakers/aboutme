@@ -41,7 +41,7 @@ Current behavior lives in code, deployment configuration, and
 | Other   | [Host hardening](host-hardening.md)                                    | Proposed host controls, evidence, risks, and staged rollout                         |
 | Other   | [Host hardening: access](host-hardening-access.md)                     | Proposed SSH, security group, and private-value controls                            |
 | Other   | [Host hardening: confinement](host-hardening-confinement.md)           | Proposed container, Chromium, and host service confinement                          |
-| 6g      | [Restore drill networking](restore-drill-networking.md)                | Temporary outbound access for the backup restore drill                              |
+| 6g      | [Restore drill](restore-drill.md)                                      | Laptop restore of the latest and a point-in-time backup                             |
 | Other   | [vMonitor quota renewal](vmonitor-quota-renewal.md)                    | Scheduled free alarm quota renewal, trust boundaries, and failure rules             |
 | Other   | [vMonitor renewal CLI](vmonitor-quota-renewal-cli.md)                  | Pinned CLI evidence, script reads, and renewal output contract                      |
 | Other   | [Telegram host alerts](telegram-host-alerts.md)                        | Host alert transport, custody, limits, and rollout                                  |
