@@ -8,9 +8,7 @@ Use the [documentation ownership table](../docs/standards/engineering.md#documen
 
 ## Agent-file formatting
 
-Files only agents read (`AGENTS.md`, `CLAUDE.md`, `instructions/`, `.claude/`, `.codex/`, `docs/plans/`) stay minified: one line per paragraph or list item, tables without padding. Prettier and markdownlint skip them. Markdown that people read keeps Prettier's 80-column wrap.
-
-`.codex/agents/*.toml` are generated from the shared preamble and role fragments in `scripts/codex-agents/`; never hand-edit them. Run `make codex-agents` after changing their sources.
+Files only agents read (`AGENTS.md`, `CLAUDE.md`, `instructions/`, `.claude/`, `docs/plans/`) stay minified: one line per paragraph or list item, tables without padding. Prettier and markdownlint skip them. Markdown that people read keeps Prettier's 80-column wrap.
 
 ## Plans and records
 
@@ -20,6 +18,6 @@ Use exact states: `planned`, `in progress`, `landed`, `verified`, `accepted`, or
 
 ## Evidence
 
-Reports go to the scratchpad outside the repository; a Codex worker's report is its final message. Findings not fixed at once become lines in `docs/plans/backlog.md`.
+Reports go to the scratchpad outside the repository; a worker's report is its final message. Findings not fixed at once become lines in `docs/plans/backlog.md`.
 
 Save assigned persona evidence under `.dev/personas/`. Persona work never edits product files. Report each defect with steps, URL, expected and actual behavior, severity, screenshot or other evidence, and owning lane.

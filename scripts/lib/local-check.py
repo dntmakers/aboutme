@@ -36,7 +36,7 @@ def open_lock(path, pre_move):
     except PermissionError:
         if not pre_move:
             raise
-        # The Codex sandbox cannot write .git, and flock works on a read-only descriptor (flock(2)).
+        # flock works on a read-only descriptor (flock(2)).
         return os.open(path, os.O_RDONLY | os.O_NOFOLLOW)
 
 

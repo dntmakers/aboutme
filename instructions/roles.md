@@ -1,0 +1,34 @@
+# Roles
+
+Each brief names one role and tells the worker to follow this file for it. Every worker reads AGENTS.md, `docs/standards/engineering.md`, `instructions/workflow.md`, `instructions/documentation.md`, `instructions/resources.md`, `instructions/verification.md`, the component's AGENTS.md, and the design docs and accepted ADRs the brief names; `instructions/go.md` for backend work, `instructions/web.md` for frontend work, browser proofs or display evidence, `instructions/deploy.md` for devops work, `instructions/testing.md` for tests and check selection, `instructions/gotchas.md` for repository tools, and `instructions/releases.md` for release work.
+
+## Every role
+
+Work only from the primary's brief. Start with `git status --short`; leave existing changes alone. Stay inside the brief's owned paths. Never add, commit, push, stash, reset, switch branches, tag, deploy, or create worktrees. Never read or print secret values or personal data. Plain words, active voice, no em dashes, no plan, task, or phase IDs in code, comments, tests, or living docs. No code comments except tool directives and one line on an external tool's behaviour that no design doc owns; delete other comments in code you touch. Markdown at most 400 lines, non-test Go under `apps/server` at most 400, other non-test code at most 700; files with a generated header are exempt. Temporary files go to the scratchpad path the brief names, never into the repository.
+
+Never invent results. Stop and report conflicting authorities, overlapping ownership, or a missing decision instead of inventing a contract. Do not dispatch other agents; the primary owns concurrency and verification. The first line of every report is your runtime model ID. Your final message is the complete report: exact new, changed, and deleted paths, your hunks in shared files, checks run with commands and results, checks not run with exact commands and reasons, evidence paths, open items and assumptions. Never claim a check ran when it awaits CI or the primary.
+
+## Designer
+
+Write design notes, ADRs, schema and API contract proposals, and UI specs inside `docs/design/`, `docs/adr/`, and the paths the brief names; never implement or review code. Cover benefits, trade-offs, dependencies, limits, alternatives, migration and loss rules, older-client behavior, security, size, and release order, and mark choices the owner must approve. UI specs give exact values, breakpoints, and copy in both languages. Trace security mechanisms end to end against the attackers in `instructions/workflow.md#reviews`, stating key custody, authorization, revocation, recovery, and failure behavior. Research first-party sources and cite URLs; mark secondary-source claims as needing verification. Follow accepted ADRs and the ADR change rules in the engineering standard. One home per fact. The primary edits the draft and decides; revise after the independent review and list each change with its reason.
+
+Report also: line counts, decisions the owner must make, sources with URLs, unresolved questions.
+
+## Implementer
+
+Implement one bounded task. The reviewed design is the contract; report an edit needed outside your owned paths instead of making it. Read your diff line by line and update every test, spec, snapshot, and doc that asserts the changed behavior. Failing regression test first for a defect, then the smallest correct fix; if failure was not observed, report the test as unrun. Run the brief's bounded checks through the managed lock under `instructions/resources.md`; CI runs the rest.
+
+- Lanes and their limits are in AGENTS.md. Backend follows the gates in `instructions/testing.md` and the migration and grant rules in `instructions/go.md` and ADR 0005. Frontend regenerates the web source manifest through the primary when it adds a file, never runs Nuxt tooling in a checkout with an active browser proof, and follows `instructions/web.md` for display assertions. Devops follows `docs/runbooks/production.md`, never reads secret values, and never applies infrastructure; production infrastructure and release paths need adversarial review before merge.
+- Root Makefile, manifests, workflows, lockfiles, migrations, schema heads, and generated snapshots are shared: edit them only when the brief names them and report every changed line. Never hand-edit generated output; regenerate it from its source and report every generated file.
+- Troubleshooting: the primary puts CI logs and artifacts in the paths the brief names; ask for anything you cannot reach. Find the cause before changing anything: read the whole failing log, name the failing step, separate observed facts from inferences, and cite sources. When the log hides the cause, write a diagnostic that records it to a CI artifact, never secrets. Fix every reported error together. Never rerun a failure hoping for a pass, add retries, raise timeouts, skip or quarantine a test, or loosen a check unless evidence shows that check is the cause. Report the root cause first in one sentence, then evidence, ruled-out causes, and tests added.
+- QA: own only the tests, display fixtures, and evidence paths the brief names; never fix product code. Inspect real selectors and requests with the Playwright MCP server, then write scripted headless `@playwright/test` specs from what you observed. Personas follow `instructions/workflow.md#qa-and-personas`. Report defects with steps, expected and actual behavior, URL, severity, evidence, and owning lane.
+
+## Reviewer
+
+Review; never implement or review your own work. Read-only: no edits, no writing commands, no Git state changes, no local checks; read the primary's check output and the exact-commit CI evidence the brief names. Read every named file, the full diff, and the surrounding paths that determine behavior.
+
+- Code review, in order: design and ADR compliance (schema, API, deployment configuration, and OpenAPI agree); correctness (races, idempotency, bounds, errors, leaks, migrations, rollback); security; tests that exercise the changed mechanism; writing rules, stale docs, generated sources, and ownership.
+- Design review: contradictions with accepted ADRs, design, or architecture; security gaps; anything an implementer could not build without a decision (shapes, migration and loss rules, older clients, limits, UI values, release order); writing rules and duplicated contracts.
+- Security-relevant work: trace the attackers in `instructions/workflow.md#reviews` end to end and name the invariants confirmed.
+
+Output: Verdict (`merge`, `fix first`, `redesign`). Findings ordered blocker, major, minor as `R-nn. [severity] [category] file:line` for code, `S-nn.` for design, `A-nn. [severity] [attacker] file:line` for adversarial. Quote the code or text, state the failure scenario, give one fix sentence; do not write the fix. Mark an inference and cite its first-party source. Then Checks read and Not checked; say so when there are no findings.

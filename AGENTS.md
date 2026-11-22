@@ -2,7 +2,7 @@
 
 ## Scope and authority
 
-This file owns shared coding-agent rules for Claude Code and Codex. Component `AGENTS.md` files map local sources, boundaries, authorities, and checks. `CLAUDE.md` imports it and adds Claude Code specifics. Codex agent definitions live in `.codex/agents/`; each is a thin wrapper that names its duty and the [instruction files](#instruction-files) it reads.
+This file owns shared coding-agent rules for Claude Code and Codex. Component `AGENTS.md` files map local sources, boundaries, authorities, and checks. `CLAUDE.md` imports it and adds Claude Code specifics. Worker role rules are in [roles](instructions/roles.md).
 
 Direct user instructions and platform safety rules come first.
 
@@ -55,11 +55,12 @@ Design wins over a plan. An accepted ADR wins over design text it contradicts; f
 
 ## Instruction files
 
-This file holds the rules every agent needs on every task. Topic files in `instructions/` hold the rest; each agent file in `.codex/agents/` and each brief names the ones its role must read.
+This file holds the rules every agent needs on every task. Topic files in `instructions/` hold the rest; [roles](instructions/roles.md) and each brief name the ones a role must read.
 
 |File|Read when|
 |-|-|
 |[`instructions/workflow.md`](instructions/workflow.md)|Planning, briefing, implementing, or reviewing|
+|[`instructions/roles.md`](instructions/roles.md)|Working as a designer, implementer, or reviewer|
 |[`instructions/resources.md`](instructions/resources.md)|Before any local command beyond reading files|
 |[`instructions/verification.md`](instructions/verification.md)|Writing, testing, or reviewing code|
 |[`instructions/releases.md`](instructions/releases.md)|Reviewing, committing, tagging, or deploying|
@@ -72,18 +73,9 @@ This file holds the rules every agent needs on every task. Topic files in `instr
 
 ## AI agent definitions
 
-`.codex/agents/*.toml` are generated from `scripts/codex-agents/`; never hand-edit them. Run `make codex-agents` to render them and `make codex-agents-check` to check for drift.
+The owner talks to the primary agent, the manager, which runs on Claude Code's default prompt with `CLAUDE.md`. It plans, briefs, verifies each worker itself, runs bounded local checks, and owns documentation, design and ADR decisions, Git, tags, deploys, and the answer to the owner. GPT Sol drafts designs, GPT Astra reviews them, GPT Terra implements, troubleshoots, and runs QA, and GPT Sol reviews code; [workflow](instructions/workflow.md#models-and-ownership) owns dispatch, routing, and the Claude stand-ins. No model reviews its own work, and Astra and Fable never write code. Workers take one bounded brief and report to the primary.
 
-The owner talks to the primary agent, the manager, which runs on Claude Code's default prompt with `CLAUDE.md`. It plans, briefs, verifies each worker itself, runs bounded local checks, and owns Git, tags, deploys, and the answer to the owner. It writes designs and documentation, reviews them, and makes the decisions. Troubleshooting goes to a subagent with the CI logs and artifacts the primary fetches. Workers take one bounded brief and report to the primary. Model routing (owner, 2026-11-20): Claude Sonnet or GPT Terra implements, troubleshoots, and runs QA; a fresh Claude Opus or GPT Sol subagent independently reviews architecture designs and code; Fable or Astra takes only hard and complex work. GPT models run directly as Claude Code subagents; the Codex CLI is the fallback (owner, 2026-11-22). The reviewing model is never the implementing one.
-
-|Tool|Where|Agents with model and effort|
-|-|-|-|
-|Claude Code|Agent tool|manager (primary; the owner chooses its model); Sonnet subagents for implementation, troubleshooting, and QA; fresh Opus subagents for independent review; Fable for hard and complex work; GPT `terra`, `sol`, `astra`, and `luna` subagents for the same roles; Opus or Fable for UI design ([workflow](instructions/workflow.md#models-and-ownership))|
-|Codex CLI (fallback)|`.codex/agents/`|`implementer` (`gpt-6.1-terra` xhigh, workspace-write), `troubleshooter` (`gpt-6.1-terra` xhigh, workspace-write, root cause and fix), `code_reviewer` (`gpt-6.1-sol` xhigh, read-only), `design_reviewer` (`gpt-6.1-sol` xhigh, read-only), `qa` (`gpt-6.1-terra` xhigh, workspace-write), `explorer` (`gpt-6-luna` low, read-only), `designer` (`gpt-6-astra` high, workspace-write)|
-
-The table gives role defaults; dispatch overrides and independent reviews follow [workflow](instructions/workflow.md#models-and-ownership). Codex `workspace-write` roles get network access and run their own bounded checks through the managed lock; read-only roles get network only with `--search`. Set model and effort explicitly on every Codex dispatch. Track these agent definitions; keep other local tool settings ignored.
-
-The primary assigns a lane and exact owned paths to each implementer brief. Design proposals belong to the primary or the designer; QA owns proofs, display evidence, release checks, and persona dogfooding, never product fixes.
+The primary assigns a lane and exact owned paths to each implementer brief. Design drafts belong to the designer and decisions to the primary; QA owns proofs, display evidence, release checks, and persona dogfooding, never product fixes.
 
 |Lane|Owned paths|Never|
 |-|-|-|
@@ -113,7 +105,7 @@ Start every task with `git status --short`: existing changes belong to someone e
 
 A report gives: the exact file set (new, changed, deleted; for a file shared with another worker, the hunks that are yours), checks run with results, checks not run with the exact command and reason, screenshots or evidence paths, and open items. Never claim a check that did not run.
 
-A subagent's report, and the Codex launcher's report, is the job's final message. Put the complete report or review in that final message; never rely on writing the report file yourself.
+A worker's report is its final message. Put the complete report or review there; never rely on writing a report file.
 
 ## Git
 
@@ -124,7 +116,7 @@ Only the primary changes Git state. Workers may read status and diffs. Workers n
 - Reorder or amend only commits that are not pushed. Rebuild the chain in a scratch worktree, check that the new tip's tree equals the old one, then `git reset --soft` to it.
 - Conventional Commits. Messages describe the change only and never mention agents, AI, or automated assistance.
 - Root `Makefile`, manifests, workflows, lockfiles, migrations, schema heads, and generated snapshots are shared: the assigned implementer edits them only when its brief says so and reports every changed line. Serialize migrations and schema versions.
-- Keep local-only paths in `.git/info/exclude`, never in the committed `.gitignore`. Of `.claude/` and `.codex/`, only `agents/` (and `.claude/settings.json`) are tracked.
+- Keep local-only paths in `.git/info/exclude`, never in the committed `.gitignore`. Of `.claude/`, only `agents/` and `settings.json` are tracked.
 
 ## Writing docs and code comments
 

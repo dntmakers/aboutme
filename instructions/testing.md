@@ -25,6 +25,6 @@ The table names required verification, not commands every worker must run locall
 
 Native macOS functional proofs remain pending runner integration and acceptance under [resources](resources.md). Native HTTPS skips only the exact journeys and WebKit exclusion in the tooling design; display harness PDFs still run. Local partial evidence never substitutes for full Linux CI.
 
-Reusable browser automation is scripted headless Playwright. To author it, use the Playwright MCP server in `.codex/config.toml` to inspect real selectors, requests, and state, then write what you observed as `@playwright/test` specs. MCP never runs the recorded automation. Report missing configuration or access to the primary.
+Reusable browser automation is scripted headless Playwright. To author it, use the Playwright MCP server to inspect real selectors, requests, and state, then write what you observed as `@playwright/test` specs. MCP never runs the recorded automation. Report missing configuration or access to the primary.
 
 - Browser proofs withhold console output. A failure line ends with fixed diagnostic words (`lang-`, `header-`, `hydrated-`, `path-`, `el-`); read them before adding a debug branch.
