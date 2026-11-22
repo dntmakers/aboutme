@@ -2,7 +2,7 @@
 
 ## Scope and authority
 
-This file owns shared coding-agent rules for Claude Code and Codex. Component `AGENTS.md` files map local sources, boundaries, authorities, and checks. `CLAUDE.md` imports it and adds Claude Code specifics. Agent definitions live in `.claude/agents/` and `.codex/agents/`; each is a thin wrapper that names its duty and the [instruction files](#instruction-files) it reads.
+This file owns shared coding-agent rules for Claude Code and Codex. Component `AGENTS.md` files map local sources, boundaries, authorities, and checks. `CLAUDE.md` imports it and adds Claude Code specifics. Codex agent definitions live in `.codex/agents/`; each is a thin wrapper that names its duty and the [instruction files](#instruction-files) it reads.
 
 Direct user instructions and platform safety rules come first.
 
@@ -55,7 +55,7 @@ Design wins over a plan. An accepted ADR wins over design text it contradicts; f
 
 ## Instruction files
 
-This file holds the rules every agent needs on every task. Topic files in `instructions/` hold the rest; each agent file in `.claude/agents/` and `.codex/agents/` names the ones its role must read.
+This file holds the rules every agent needs on every task. Topic files in `instructions/` hold the rest; each agent file in `.codex/agents/` and each brief names the ones its role must read.
 
 |File|Read when|
 |-|-|
@@ -74,11 +74,11 @@ This file holds the rules every agent needs on every task. Topic files in `instr
 
 `.codex/agents/*.toml` are generated from `scripts/codex-agents/`; never hand-edit them. Run `make codex-agents` to render them and `make codex-agents-check` to check for drift.
 
-The owner talks to the primary agent, which runs as `manager` in `.claude/settings.json`. It plans, briefs, verifies each worker itself, runs bounded local checks, and owns Git, tags, deploys, and the answer to the owner. It writes designs and documentation, reviews them, and makes the decisions. Troubleshooting goes to a subagent with the CI logs and artifacts the primary fetches. Workers take one bounded brief and report to the primary. Model routing (owner, 2026-11-20): Claude Sonnet or Codex Terra implements, troubleshoots, and runs QA; a fresh Claude Opus subagent or Codex Sol independently reviews architecture designs and code; Fable or Astra takes only hard and complex work. The reviewing model is never the implementing one.
+The owner talks to the primary agent, the manager, which runs on Claude Code's default prompt with `CLAUDE.md`. It plans, briefs, verifies each worker itself, runs bounded local checks, and owns Git, tags, deploys, and the answer to the owner. It writes designs and documentation, reviews them, and makes the decisions. Troubleshooting goes to a subagent with the CI logs and artifacts the primary fetches. Workers take one bounded brief and report to the primary. Model routing (owner, 2026-11-20): Claude Sonnet or Codex Terra implements, troubleshoots, and runs QA; a fresh Claude Opus subagent or Codex Sol independently reviews architecture designs and code; Fable or Astra takes only hard and complex work. The reviewing model is never the implementing one.
 
 |Tool|Where|Agents with model and effort|
 |-|-|-|
-|Claude Code|`.claude/agents/`|`manager` (primary; the owner chooses its model); Sonnet subagents for implementation, troubleshooting, and QA; fresh Opus subagents for independent review; Fable for hard and complex work; Opus or Fable for UI design ([workflow](instructions/workflow.md#models-and-ownership))|
+|Claude Code|Agent tool|manager (primary; the owner chooses its model); Sonnet subagents for implementation, troubleshooting, and QA; fresh Opus subagents for independent review; Fable for hard and complex work; Opus or Fable for UI design ([workflow](instructions/workflow.md#models-and-ownership))|
 |Codex|`.codex/agents/`|`implementer` (`gpt-6.1-terra` xhigh, workspace-write), `troubleshooter` (`gpt-6.1-terra` xhigh, workspace-write, root cause and fix), `code_reviewer` (`gpt-6.1-sol` xhigh, read-only), `design_reviewer` (`gpt-6.1-sol` xhigh, read-only), `qa` (`gpt-6.1-terra` xhigh, workspace-write), `explorer` (`gpt-6-luna` low, read-only), `designer` (`gpt-6-astra` high, workspace-write)|
 
 The table gives role defaults; dispatch overrides and independent reviews follow [workflow](instructions/workflow.md#models-and-ownership). Codex `workspace-write` roles get network access and run their own bounded checks through the managed lock; read-only roles get network only with `--search`. Set model and effort explicitly on every Codex dispatch. Track these agent definitions; keep other local tool settings ignored.
