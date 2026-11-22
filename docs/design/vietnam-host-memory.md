@@ -41,8 +41,7 @@ All scheduled app jobs share one lock and run one at a time. A deploy stops
 their timers before starting maintenance, so the second 128 MiB Caddy replaces
 the 256 MiB job in the overlap envelope. The server and serving Caddy stop
 before a migration or database setup starts. The deploy proof must show no job,
-migration, or database setup overlaps server warmup. Restore drills use their
-temporary host.
+migration, or database setup overlaps server warmup.
 
 PostgreSQL has `shared_buffers = 256MB`, `work_mem = 4MB`,
 `maintenance_work_mem = 64MB`, and `max_connections = 40` inside its 1 GiB

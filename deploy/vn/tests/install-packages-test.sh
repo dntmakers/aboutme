@@ -184,7 +184,7 @@ export FIXTURE_BUNDLE=$work/bundle
 mkdir -p "$FIXTURE_BUNDLE/host" "$FIXTURE_BUNDLE/scripts"
 for helper in host/crowdsec-privacy-notice-host.sh host/workload-lock.sh \
   scripts/fence.sh scripts/deploy-safety.sh scripts/deploy-host.sh \
-  scripts/crowdsec-privacy-notice.sh scripts/restore-drill.sh; do
+  scripts/crowdsec-privacy-notice.sh; do
   touch "$FIXTURE_BUNDLE/$helper"
 done
 {

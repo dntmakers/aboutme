@@ -21,15 +21,12 @@ spending three tries on unrelated keys. Risk: operator lockout or interrupted
 transport, not automatic cancellation of durable host operations. [Noble SSH]
 
 **Forwarding.** Propose `AllowTcpForwarding local`, `PermitOpen none`,
-`AllowStreamLocalForwarding no`, and `PermitTunnel no`. A privately rendered,
-attended drill exception may replace `PermitOpen` with only the drill host and
-SSH port, then restore `none`. `V/scripts/restore-drill.sh:450` uses `ssh -W`;
-blanket forwarding denial breaks that recovery path. Validate exception removal
-after success and failure. This limits convenient pivots by a stolen operator
-key; an administrator with a shell and sudo can bypass it. The workflow's
-compromised-container attacker benefits only if it steals operator authority.
-Home: SSH drop-in and the drill coordinator, not a public destination list.
-[OpenSSH]
+`AllowStreamLocalForwarding no`, and `PermitTunnel no`. No supported script
+forwards through the host; the restore drill runs on the laptop and does not use
+SSH. This limits convenient pivots by a stolen operator key; an administrator
+with a shell and sudo can bypass it. The workflow's compromised-container
+attacker benefits only if it steals operator authority. Home: SSH drop-in, not a
+public destination list. [OpenSSH]
 
 **Cryptography.** S:26-35 offers modern AEAD/CTR ciphers and hybrid/curve/DH
 exchange, plus SHA-1 and 64-bit MAC variants. Keep Noble's patched cipher, KEX,
@@ -47,8 +44,8 @@ console log. Keep a current SSH session. Stage the candidate, run `sshd -t` and
 and account for first-value-wins includes and Match blocks. Reload the active
 SSH service only after success; socket activation needs its own listener
 handling. Open a second pinned-host-key login and prove sudo, rsync, deployment
-transport, rejected forwarding, and the scoped drill path before closing the
-first. Syntax or login failure restores the saved config. [OpenSSH]
+transport, and rejected forwarding before closing the first. Syntax or login
+failure restores the saved config. [OpenSSH]
 
 **Security group.** `V/prod/variables.tf:65-88` supplies public defaults;
 `V/prod/main.tf:46-57` creates IPv4 SSH rules. The accepted design describes
@@ -79,13 +76,11 @@ Port secrecy is not authentication; history retains earlier disclosures.
 Literal/default search found these locations; values are intentionally omitted:
 
 - `V/prod/variables.tf:68,76,82,83,86,87`; `V/prod/main.tf:47,126,127`;
-  `V/prod/prod.tfvars.example:2,3`;
-  `V/prod/tests/drill-network.tftest.hcl:64,74`.
+  `V/prod/prod.tfvars.example:2,3`.
 - `V/README.md:68,73,74`; `V/scripts/ssh-lib.sh:2`; `V/probe/probe.sh:8`;
   `V/probe/README.md:14,15,46`.
 - `V/tests/deploy-failure-test.sh:168`; `V/tests/host-operations-test.sh:126`.
 - `docs/design/vietnam-production.md:49,153`;
-  `docs/design/restore-drill-networking.md:33`;
   `docs/runbooks/production.md:11,16`; `docs/runbooks/account-delete.md:21`;
   `docs/runbooks/observer.md:129`; `instructions/releases.md:16`.
 

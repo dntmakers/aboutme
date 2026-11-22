@@ -160,29 +160,4 @@ run_volume '' '' '' --format || fail "blank device with --format: $(cat "$work/v
 [[ $(grep -E '^(mkfs\.ext4|wipefs) ' "$HOST_RULES_CALLS") == "mkfs.ext4 -q -L aboutme-data $device" ]] ||
   fail "blank device with --format must call mkfs.ext4 once: $(grep -E '^(mkfs\.ext4|wipefs) ' "$HOST_RULES_CALLS" | paste -sd'|')"
 
-drill=$root/deploy/vn/scripts/restore-drill.sh
-mapfile -t install_body < <(sed -n '/^install_drill_host() {/,/^}/p' "$drill" |
-  sed '1d;$d' | grep -vE '^[[:space:]]*(#|$)')
-((${#install_body[@]} >= 3)) || fail 'restore-drill.sh has no install_drill_host body'
-install_line=${install_body[-3]}
-stop_lines=$(printf '%s\n' "${install_body[@]: -2}" | sed 's/^[[:space:]]*//' | sort)
-expected_stops=$(printf '%s\n' \
-  'rsh sudo systemctl stop postgresql@18-main.service' \
-  "rsh sudo bash -c 'systemctl stop \"aboutme-backup*.timer\" 2>/dev/null || true'" | sort)
-[[ $install_line == *'/host/install.sh"'* && $stop_lines == "$expected_stops" ]] ||
-  fail "install_drill_host must end with install.sh, then the PostgreSQL and backup timer stops: $(printf '%s|' "${install_body[@]: -3}")"
-install_call=$(grep -nx 'install_drill_host' "$drill" | cut -d: -f1)
-copy_call=$(grep -nx 'copy_secrets' "$drill" | cut -d: -f1)
-restore_call=$(grep -n '^restore_run ' "$drill" | head -n1 | cut -d: -f1)
-[[ $install_call =~ ^[0-9]+$ && $copy_call =~ ^[0-9]+$ && $restore_call =~ ^[0-9]+$ ]] ||
-  fail 'restore-drill.sh must call install_drill_host, copy_secrets and restore_run once each at top level'
-((install_call < copy_call && copy_call < restore_call)) ||
-  fail "restore-drill.sh must run install_drill_host (line $install_call) before copy_secrets (line $copy_call)"
-copy_start=$(grep -n '^copy_secrets() {' "$drill" | cut -d: -f1)
-copy_end=$(awk -v s="$copy_start" 'NR > s && /^}/ {print NR; exit}' "$drill")
-while IFS=: read -r number _; do
-  ((number > copy_start && number < copy_end)) ||
-    fail "restore-drill.sh line $number reads secrets.conf outside copy_secrets"
-done < <(grep -n 'secrets\.conf' "$drill")
-
 echo 'host rules tests passed'
