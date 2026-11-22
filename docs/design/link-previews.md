@@ -275,18 +275,15 @@ the owner to review:
 
 ## Crawlers, WAF, and rate limits
 
-The web ACL runs the Amazon IP reputation group, whose rules block IPs "actively
-engaging in malicious activities" and reconnaissance, and count DDoS sources
-[waf-ip]. Nothing in its description targets platform crawlers, which run from
-the platforms' own networks, so a block is unlikely (inference, **Verify**).
-Sharing one link costs two to three requests, far under the rate rule's 2,000
-per 5 minutes per IP. The web ACL must not gain the Anonymous IP list or Bot
-Control in blocking mode without an allow rule for the crawlers above: the
-Anonymous IP list blocks hosting providers by default [waf-ip]. Viewer analytics
-adds both in Count mode only, scoped to its collect path
-([counting](viewer-analytics/counting.md#layers-2-and-3-edge-labels)). With WAF
-logging off, devops checks the web ACL's sampled requests for blocked crawler
-user agents during the live checks.
+Production runs Coraza with the OWASP Core Rule Set in detection only, and
+CrowdSec bans by address, in Caddy on the
+[Vietnam host](vietnam-production.md#edge). Platform crawlers run from the
+platforms' own networks, so a CrowdSec ban of one is unlikely (inference,
+**Verify**). Sharing one link costs two to three requests. Neither layer may
+block the crawlers above: a Coraza blocking mode or a CrowdSec scenario that
+bans hosting-provider ranges needs an allow rule for them first. Devops checks
+the Coraza match log and CrowdSec decisions for blocked crawler user agents
+during the live checks.
 
 ## Compatibility, loss, and rollback
 
@@ -360,5 +357,3 @@ crop, then the same after unpublish.
 [dc]: https://github.com/discord/discord-api-docs/pull/8606
 [apple]:
   https://developer.apple.com/documentation/technotes/tn3156-create-rich-previews-for-messages
-[waf-ip]:
-  https://docs.aws.amazon.com/waf/latest/developerguide/aws-managed-rule-groups-ip-rep.html

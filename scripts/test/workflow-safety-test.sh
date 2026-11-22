@@ -1194,9 +1194,6 @@ grep -Fq '[ -e artifacts/aboutme-observer-amd64.spdx.json ]' <<<"$RELEASE_JOB" |
   fail "release job does not require the amd64 observer SBOM"
 grep -Fq 'echo "ghcr.io/$OWNER/aboutme-observer@$d linux/amd64" >>release/digests.txt' <<<"$RELEASE_JOB" ||
   fail "release job does not list the observer amd64 digest"
-grep -Fq 'if gh release view "$TAG" >/dev/null 2>&1; then' <<<"$RELEASE_JOB" &&
-  grep -Fq 'gh release upload "$TAG" --clobber' <<<"$RELEASE_JOB" ||
-  fail "release job cannot repair an existing release on rerun"
 
 assert_observer_scan() {
   awk '

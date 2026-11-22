@@ -89,8 +89,6 @@ expect_header() {
   check "$label $name matches $pattern" matches "$value" "$pattern"
 }
 
-server_ok() { [ -z "$1" ] || [ "$1" = CloudFront ]; }
-
 check_headers() {
   local label=$1 file=$2 status name
   status=$(awk 'NR == 1 {print $2}' "$file")
@@ -101,7 +99,7 @@ check_headers() {
   expect_header "$label" "$file" cache-control 'public, max-age=30'
   check "$label access-control-allow-origin is *" \
     [ "$(header "$file" access-control-allow-origin)" = '*' ]
-  check "$label server absent or CloudFront" server_ok "$(header "$file" server)"
+  check "$label server absent" empty "$(header "$file" server)"
   for name in x-amz-request-id x-amz-id-2 x-amz-server-side-encryption; do
     check "$label $name absent" empty "$(header "$file" "$name")"
   done

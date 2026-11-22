@@ -83,4 +83,7 @@ limits.
 tag use were removed with the undeployed AWS code (ADR 0026); the observer runs
 only on podman.
 
+2026-11-22: the arm64 observer image under the plain version tag is no longer
+published; releases carry only `<tag>-amd64`.
+
 Originally proposed as ADR 0057.

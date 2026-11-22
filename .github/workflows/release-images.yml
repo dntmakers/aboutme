@@ -447,12 +447,6 @@ jobs:
           EOF
       - name: Publish
         run: |
-          if gh release view "$TAG" >/dev/null 2>&1; then
-            gh release edit "$TAG" --notes-file release/notes.md
-            gh release upload "$TAG" --clobber \
-              release/digests.txt release/aboutme-*.spdx.json
-          else
-            gh release create "$TAG" --verify-tag --title "$TAG" \
-              --notes-file release/notes.md \
-              release/digests.txt release/aboutme-*.spdx.json
-          fi
+          gh release create "$TAG" --verify-tag --title "$TAG" \
+            --notes-file release/notes.md \
+            release/digests.txt release/aboutme-*.spdx.json

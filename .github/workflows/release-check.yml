@@ -55,6 +55,9 @@ jobs:
       matrix:
         name: [server, web, caddy, observer]
         arch: [arm64, amd64]
+        exclude:
+          - name: observer
+            arch: arm64
         include:
           - name: server
             dockerfile: deploy/server.Dockerfile

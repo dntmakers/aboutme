@@ -101,7 +101,6 @@ cache-control: public, max-age=30
 access-control-allow-origin: *
 date: Fri, 02 Oct 2026 03:21:00 GMT
 age: 5
-server: CloudFront
 '
 
 reset() {
@@ -296,8 +295,8 @@ printf '%sx-amz-request-id: ABC\n' "$GOOD_HEADERS" >"$STUB/headers"
 expect_fail 'x-amz-request-id' 'x-amz-request-id absent'
 
 reset
-printf '%s' "${GOOD_HEADERS/server: CloudFront/Server: AmazonS3}" >"$STUB/headers"
-expect_fail 'Server: AmazonS3' 'server absent or CloudFront'
+printf '%sServer: AmazonS3\n' "$GOOD_HEADERS" >"$STUB/headers"
+expect_fail 'Server: AmazonS3' 'server absent'
 
 reset
 printf '%s' "${GOOD_HEADERS/max-age=30/max-age=300}" >"$STUB/headers"

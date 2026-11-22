@@ -970,6 +970,7 @@ function checkReleaseContracts(manual, release, action) {
     assert.equal(job.strategy["fail-fast"], false);
     assert.deepEqual(job.strategy.matrix.name, ["server", "web", "caddy", "observer"]);
     assert.deepEqual(job.strategy.matrix.arch, ["arm64", "amd64"], "manual architectures");
+    assert.deepEqual(job.strategy.matrix.exclude, [{ name: "observer", arch: "arm64" }], "manual observer architectures");
     for (const [arch, runner, machine] of [["arm64", "ubuntu-24.04-arm", "aarch64"], ["amd64", "ubuntu-24.04", "x86_64"]]) {
       assert.deepEqual(job.strategy.matrix.include.find((entry) => entry.arch === arch), { arch, runner, machine }, `native ${arch} runner`);
     }

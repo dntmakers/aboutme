@@ -180,7 +180,7 @@ expect_status success
 expect_count 7
 expect_all_targets
 grep -Fq 'v9.9.9' "$WORK/reports/summary.txt" || fail 'missing selected release'
-printf 'ok - published release scans eight immutable platform digests\n'
+printf 'ok - published release scans seven immutable platform digests\n'
 
 fixture
 run_scan v8.8.8
