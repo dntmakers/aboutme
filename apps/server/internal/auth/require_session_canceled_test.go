@@ -63,3 +63,24 @@ func TestRequireSession_StoreFailureStillAnswers500(t *testing.T) {
 		t.Fatalf("status = %d, want 500", recorder.Code)
 	}
 }
+
+func TestOptionalSession_CanceledRequestAnswers499(t *testing.T) {
+	t.Parallel()
+	manager := auth.NewSessionManagerForTest(store.New(canceledDB{err: context.Canceled}), time.Now)
+	reached := false
+	handler := auth.OptionalSession(manager)(http.HandlerFunc(func(http.ResponseWriter, *http.Request) { reached = true }))
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	request := httptest.NewRequestWithContext(ctx, http.MethodPost, "/", nil)
+	request.AddCookie(&http.Cookie{Name: auth.SessionCookieName, Value: "token"})
+	recorder := httptest.NewRecorder()
+	handler.ServeHTTP(recorder, request)
+
+	if recorder.Code != 499 {
+		t.Fatalf("status = %d, want 499", recorder.Code)
+	}
+	if reached {
+		t.Fatal("handler ran after a canceled session read")
+	}
+}

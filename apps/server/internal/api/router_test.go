@@ -740,7 +740,26 @@ func TestRouterLogsThePublicRouteClassNotThePath(t *testing.T) {
 	if _, found := public0["path"]; found || strings.Contains(lines[0], "guessed-slug") {
 		t.Errorf("public log line carries the path: %s", lines[0])
 	}
-	if other["path"] != "/other" {
-		t.Errorf("other path = %v, want /other", other["path"])
+	if other["route"] != "not_found" {
+		t.Errorf("other route = %v, want not_found", other["route"])
+	}
+}
+
+func TestRouterLogsNotFoundWithoutThePath(t *testing.T) {
+	t.Parallel()
+
+	for _, path := range []string{"/%61da-lovelace", "/api/v1/public/resumes/a/extra", "/guessed-slug/child"} {
+		var logs bytes.Buffer
+		handler := api.New(slog.New(slog.NewTextHandler(&logs, nil)), nil, api.Options{}, nil)
+		request := httptest.NewRequestWithContext(context.Background(), http.MethodGet, path, nil)
+		recorder := httptest.NewRecorder()
+		handler.ServeHTTP(recorder, request)
+		if recorder.Code != http.StatusNotFound {
+			t.Fatalf("%s: status = %d, want 404", path, recorder.Code)
+		}
+		got := logs.String()
+		if !strings.Contains(got, "route=not_found") || strings.Contains(got, "path=") || strings.Contains(got, "lovelace") || strings.Contains(got, "guessed") {
+			t.Errorf("%s: log = %q, want route=not_found and no path", path, got)
+		}
 	}
 }

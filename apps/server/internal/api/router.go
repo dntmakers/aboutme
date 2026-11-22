@@ -131,6 +131,7 @@ func methodMatches(routeMethod, requestMethod string) bool {
 
 func NotFound() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		SetLogRoute(r.Context(), "not_found")
 		WriteError(w, http.StatusNotFound, "not_found",
 			fmt.Sprintf("no route for %s %s", r.Method, r.URL.Path))
 	}
