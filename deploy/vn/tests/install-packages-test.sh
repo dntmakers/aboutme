@@ -406,6 +406,7 @@ for pg_call in "${pg_calls[@]}"; do
     [[ $(wc -l <<<"$pg_apt") == 1 && " $pg_apt " == *" postgresql-common=$pg_version "* &&
       " $pg_apt " == *" postgresql-client-common=$pg_version "* ]] ||
       fail "$pg_host host did not pin postgresql-client-common with postgresql-common"
+    [[ " $pg_apt " == *" --no-install-recommends "* ]] || fail "$pg_host host installed postgresql-common with Recommends"
     for package in postgresql-common postgresql-client-common; do
       [[ $(<"$pg_case/state/$package") == "hold ok installed"$'\t'"$pg_version" ]] ||
         fail "$pg_host host left $package unheld or off its pin"
@@ -434,6 +435,14 @@ for pg_path in postgres-only full; do
   ((pg_common < pg_chown)) || fail "$pg_path path chowns the data directory before installing postgresql-common"
   ((pg_chown < pg_server)) || fail "$pg_path path installs postgresql-18 before chowning the data directory"
 done
+pg_server_calls=$(grep -c '^[[:space:]]*install_pinned --no-install-recommends "postgresql-' "$installer" || true)
+[[ $pg_server_calls == 4 ]] || fail 'a PostgreSQL install_pinned call can pull in Recommends such as postgresql-18-jit'
+grep -qF -- '"${apt_flags[@]}"' "$installer" || fail 'install_pinned dropped the no-Recommends flag'
+printf 'PASS postgresql-installs-skip-recommends\n'
+grep -qF 'https://apt-archive.postgresql.org/pub/repos/apt noble-pgdg-archive main' "$installer" ||
+  fail 'installer lacks the PGDG archive source for pinned versions'
+printf 'PASS installer-adds-pgdg-archive-source\n'
+
 printf 'PASS postgresql-data-directory-chown-runs-between-common-and-server-installs\n'
 
 pg_server_version=$(sed -n 's/^POSTGRESQL_VERSION=//p' "$installer")

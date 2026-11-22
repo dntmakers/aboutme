@@ -121,13 +121,17 @@ package_is_pinned() {
 
 install_pinned() {
   local spec pkg holds failure='' status=0
-  local -a held_packages=()
+  local -a held_packages=() apt_flags=()
+  if [[ ${1:-} == --no-install-recommends ]]; then
+    apt_flags=(--no-install-recommends)
+    shift
+  fi
   holds=$(apt-mark showhold) || die "cannot inspect package holds"
   for spec in "$@"; do
     pkg=${spec%%=*}
     if grep -qxF "$pkg" <<<"$holds"; then held_packages+=("$pkg"); fi
   done
-  apt-get install -y -qq --allow-downgrades --allow-change-held-packages "$@" >/dev/null || status=$?
+  apt-get install -y -qq "${apt_flags[@]}" --allow-downgrades --allow-change-held-packages "$@" >/dev/null || status=$?
   if ((status == 0)); then
     for spec in "$@"; do
       if ! package_is_pinned "$spec"; then
@@ -323,16 +327,18 @@ apt-get install -y -qq ca-certificates curl gnupg age "${alert_packages[@]}" pyt
 install_key "$bundle/host/keys/pgdg.asc" "$PGDG_SIGNER_FPR" /etc/apt/keyrings/postgresql.asc
 echo "deb [signed-by=/etc/apt/keyrings/postgresql.asc] https://apt.postgresql.org/pub/repos/apt noble-pgdg main" \
   >/etc/apt/sources.list.d/pgdg.list
+echo "deb [signed-by=/etc/apt/keyrings/postgresql.asc] https://apt-archive.postgresql.org/pub/repos/apt noble-pgdg-archive main" \
+  >>/etc/apt/sources.list.d/pgdg.list
 say "PGDG repository in place"
 
 if [ "$only" = postgres ]; then
   apt-get update -qq
-  install_pinned "postgresql-common=$POSTGRESQL_COMMON_VERSION" "postgresql-client-common=$POSTGRESQL_COMMON_VERSION"
+  install_pinned --no-install-recommends "postgresql-common=$POSTGRESQL_COMMON_VERSION" "postgresql-client-common=$POSTGRESQL_COMMON_VERSION"
   chown postgres:postgres /srv/data/postgresql
   chmod 0700 /srv/data/postgresql
   chown root:postgres /srv/data/pgbackrest-conf
   chmod 0750 /srv/data/pgbackrest-conf
-  install_pinned "postgresql-18=$POSTGRESQL_VERSION" "postgresql-client-18=$POSTGRESQL_VERSION" \
+  install_pinned --no-install-recommends "postgresql-18=$POSTGRESQL_VERSION" "postgresql-client-18=$POSTGRESQL_VERSION" \
     "libpq5=$POSTGRESQL_VERSION" "pgbackrest=$PGBACKREST_VERSION"
   install --compare -m 0644 "$bundle/host/etc/pgbackrest/pgbackrest.conf" /etc/pgbackrest/pgbackrest.conf
   install_admission_transition install_postgresql_config \
@@ -359,12 +365,12 @@ install_crowdsec_file "$bundle/edge/crowdsec/acquis.d/aboutme-http.yaml" \
 install_crowdsec_remove_acquisition
 
 # 3. Packages. postgresql-common's maintainer scripts create the postgres user.
-install_pinned "postgresql-common=$POSTGRESQL_COMMON_VERSION" "postgresql-client-common=$POSTGRESQL_COMMON_VERSION"
+install_pinned --no-install-recommends "postgresql-common=$POSTGRESQL_COMMON_VERSION" "postgresql-client-common=$POSTGRESQL_COMMON_VERSION"
 chown postgres:postgres /srv/data/postgresql
 chmod 0700 /srv/data/postgresql
 chown root:postgres /srv/data/pgbackrest-conf
 chmod 0750 /srv/data/pgbackrest-conf
-install_pinned "postgresql-18=$POSTGRESQL_VERSION" "postgresql-client-18=$POSTGRESQL_VERSION" \
+install_pinned --no-install-recommends "postgresql-18=$POSTGRESQL_VERSION" "postgresql-client-18=$POSTGRESQL_VERSION" \
   "libpq5=$POSTGRESQL_VERSION" "pgbackrest=$PGBACKREST_VERSION"
 install -d -m 0755 /etc/systemd/system/crowdsec.service.d \
   /etc/systemd/system/crowdsec-firewall-bouncer.service.d
