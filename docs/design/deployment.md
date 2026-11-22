@@ -143,8 +143,8 @@ number of messages. No production credentials enter that capture.
 
 PostgreSQL 18 runs on the host's encrypted data volume and listens only on its
 Unix socket. pgBackRest archives WAL to GreenNode vStorage and retains backups
-for 30 days. Quarterly [restore drills](restore-drill.md) check the latest backup and a
-point-in-time target on the owner's laptop. See the
+for 30 days. Quarterly [restore drills](restore-drill.md) check the latest
+backup and a point-in-time target on the owner's laptop. See the
 [Vietnam database design](vietnam-production.md#postgresql).
 
 Migrations run as a separate deploy step, never at server startup
