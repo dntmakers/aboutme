@@ -115,8 +115,8 @@ const vnDebsStep = vnDebs.runs.steps[0];
 assert.equal(vnDebsStep.if, undefined, "VN packages: always verify");
 assert.equal(vnDebsStep["continue-on-error"], undefined, "VN packages: loading failures block");
 const vnDebsRun = vnDebsStep.run;
-assert.ok(vnDebsRun.includes("ghcr.io/dannyota/vn-infra-debs@sha256:afe81df59073eef94c642963e4bcdfd4bc762fafc8f2b9c75abe2b625f0ad0c1"), "VN packages: pinned image");
-assert.ok(vnDebsRun.includes("5d8a71a91b0585bfede57369c825a25a304d756d4ba56df4a07901c11c2bd455  SHA256SUMS"), "VN packages: pinned manifest");
+assert.ok(vnDebsRun.includes("ghcr.io/dannyota/vn-infra-debs@sha256:b45bfae022b8c9fa06442fd7f3b7dd0146760faa6773593f773e1cf9c276c4e0"), "VN packages: pinned image");
+assert.ok(vnDebsRun.includes("0a09014873a2a79ee68441b051b82e7a5e3bf86c3c7bb16fe6cb602bb2123117  SHA256SUMS"), "VN packages: pinned manifest");
 assert.ok(vnDebsRun.indexOf("sha256sum -c -") < vnDebsRun.indexOf("sha256sum -c SHA256SUMS") &&
   vnDebsRun.indexOf("sha256sum -c -") >= 0 && vnDebsRun.indexOf("sha256sum -c SHA256SUMS") < vnDebsRun.indexOf('mv "$stage/debs"'),
   "VN packages: verify manifest and contents before exposing packages");
