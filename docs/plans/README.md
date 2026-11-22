@@ -7,7 +7,6 @@ Plans hold open work only. A plan is deleted when its work ships; Git keeps it. 
 |Path|Holds|
 |-|-|
 |[backlog.md](backlog.md)|Open follow-ups and launch gates|
-|[crowdsec-postgresql.md](crowdsec-postgresql.md)|CrowdSec PostgreSQL storage, bounded probe paths, retention, and ordinary deployment|
 |[restore-drill.md](restore-drill.md)|Isolated backup restore drill and its remaining safety proofs|
 |[roadmap.md](roadmap.md)|Vision and feature order for v0.9 to v1.x, with the owner decisions|
 |[traceability/](traceability/README.md)|Acceptance-criterion ownership and evidence|
