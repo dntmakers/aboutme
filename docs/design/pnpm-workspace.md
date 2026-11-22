@@ -68,10 +68,8 @@ pnpm keeps one content store per user at its default path. Only installs that
 the owner's sessions run under the managed lock write it. A checkout or worktree
 installs with `pnpm install --frozen-lockfile --offline` once the store holds
 its versions; when a version is missing, the offline install fails and the
-session runs a normal frozen install. Codex sandboxes get no writable store or
-cache: the dispatching session installs a worktree before it dispatches a
-worker, and `scripts/codex-agent.sh` drops the npm cache root once nothing uses
-it.
+session runs a normal frozen install. The dispatching session installs a
+worktree before it dispatches a worker.
 
 The pre-push and ci-local guard keeps refusing borrowed dependencies. It checks
 each pnpm project root, the workspace root and `deploy/dev-https-browser`, on

@@ -11,7 +11,6 @@ The primary owns shared script entry points and manifests and assigns exact path
 |Documentation|`check-doc-links.mjs` and `test/check-doc-links.test.mjs`|
 |Local stacks and proofs|`dev-native.sh`, `dev-https.sh`, `lib/`, `dev-https-test.sh`, and browser staging helpers|
 |Release and production evidence|`release-eligibility.sh`, `deployment-document-check.sh`, `totp-production-proof.sh`; matching `test/` scripts|
-|Agent launch|`codex-agent.sh` and `test/codex-agent-test.sh`|
 |Source archives|`web-e2e-source.sh`, `web-source-build.sh`, and source manifest generators; sibling tests|
 
 ## Generator sources and outputs
@@ -26,6 +25,6 @@ Schema generation starts at `packages/schema/scripts/generate.mjs`; API client g
 
 Read [workflow](../instructions/workflow.md), [resource rules](../instructions/resources.md), [verification](../instructions/verification.md), [testing](../instructions/testing.md), and [documentation instructions](../instructions/documentation.md). Release scripts also follow [release rules](../instructions/releases.md).
 
-Root `Makefile` wires script tests into operational suites. `test/pre-push-test.sh` checks formatter selection, execution guards, and the pnpm dependency-link guard; `test/pnpm-policy-test.sh` checks that pnpm refuses a differing `packageManager` version and stale dependencies; `npm-audit.sh` runs `pnpm audit` per project directory; `test/codex-agent-test.sh` checks launcher wiring, settings validation, sandbox network and writable roots, and the credential-free environment using fixture roles. `packages/publicroots/public-roots.test.mjs` and `generate-web-e2e-source-manifest-test.sh` protect generated maps; hosted CI owns execution.
+Root `Makefile` wires script tests into operational suites. `test/pre-push-test.sh` checks formatter selection, execution guards, and the pnpm dependency-link guard; `test/pnpm-policy-test.sh` checks that pnpm refuses a differing `packageManager` version and stale dependencies; `npm-audit.sh` runs `pnpm audit` per project directory; `packages/publicroots/public-roots.test.mjs` and `generate-web-e2e-source-manifest-test.sh` protect generated maps; hosted CI owns execution.
 
 `check-path-case.sh` rejects case-folded index path collisions, including directory spelling clashes, in operational CI and static pre-push checks; `test/check-path-case-test.sh` covers index-only fixtures.

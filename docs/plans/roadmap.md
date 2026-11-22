@@ -163,6 +163,6 @@ Decided on 2026-11-15:
 
 1. Build for the owner's own use first.
 2. v0.9 adds the home page and the public resume's web layout, ahead of GitHub evidence.
-3. UI design and frontend work go to Claude subagents, not `gpt-6-astra`.
+3. UI design and frontend work follow the routes in [workflow](../../instructions/workflow.md#models-and-ownership).
 4. The undeployed AWS code is removed; dependencies move to pnpm with a one-day minimum release age; release images carry third-party licences, with a written source offer for base-layer GPL software.
 5. v1.x follows v1.0 with the mobile app, knowledge, tracks and shared review, as [above](#v1x-a-place-to-build-a-career).
