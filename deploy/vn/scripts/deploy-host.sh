@@ -297,25 +297,6 @@ step_fail_closed() {
   say "maintenance up; app and job timers stopped"
 }
 
-step_cutover_quiesce() {
-  checkpoint
-  aboutme_stop_jobs 600 || die "job timers or active jobs did not stop"
-  aboutme_assert_cutover_quiescent || die "the host is not quiescent for cutover"
-  say "cutover host is quiescent"
-}
-
-step_cutover_check() {
-  checkpoint
-  aboutme_assert_cutover_quiescent || die "the host is not quiescent for cutover"
-  say "cutover host is quiescent"
-}
-
-step_cutover_fail_closed() {
-  checkpoint
-  aboutme_fail_closed 600 || die "could not enforce the fail-closed cutover state"
-  say "cutover host is fail closed"
-}
-
 step_maintenance_up() {
   local image=$1 mtag mnumber
   image_ok caddy "$image"
@@ -609,9 +590,6 @@ case "$step:$#" in
   timers-stop:0) step_timers stop ;;
   timers-start:0) step_timers start ;;
   fail-closed:0) step_fail_closed ;;
-  cutover-quiesce:0) step_cutover_quiesce ;;
-  cutover-check:0) step_cutover_check ;;
-  cutover-fail-closed:0) step_cutover_fail_closed ;;
   maintenance-up:1) step_maintenance_up "$1" ;;
   ban-test:2) step_ban_test "$@" ;;
   app-down:0) step_app_down ;;

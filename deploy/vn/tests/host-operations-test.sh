@@ -65,6 +65,10 @@ done
 for text in operation-run.sh operation-state.sh operation-account.sh aboutme-operation@.service aboutme-operation-retention.service aboutme-operation-retention.timer; do
   grep -qF "$text" "$here/scripts/operations.sh" || fail 'bundle hash omission'
 done
+while read -r required; do
+  [[ $required == scripts/* && $required != scripts/crowdsec-privacy-notice.sh ]] || continue
+  sed -n '/^files=(/,/^)/p' "$here/scripts/operations.sh" | grep -qwF "$required" || fail "operations.sh omits $required from its hash list"
+done < <(sed -n '/^for required in /,/; do$/p' "$here/host/install.sh" | tr ' ;\\' '\n\n\n' | grep -E '^scripts/')
 grep -qF 'mountpoint -q /srv/data' "$here/scripts/fence.sh" || fail 'missing mount accepted'
 grep -qF 'key-change.json' "$here/scripts/fence.sh" || fail 'marker not checked'
 grep -qF 'operation_release_guard' "$here/scripts/fence.sh" || fail 'direct release bypass'

@@ -23,9 +23,6 @@ copy_tree='copy_tree() {'+block('copy_tree() {','\n}\n')+'\n}\n'
 helpers=''
 if '# Serialize service operations with retention and watchdog admission.' in source:
     helpers=block('# Serialize service operations with retention and watchdog admission.', '# copy_tree')
-postgres=block('if [ "$only" = postgres ]; then','\nfi\n')
-postgres=postgres[re.search(r'^  install .*pgbackrest/pgbackrest.conf.*$',postgres,re.M).start():]
-postgres=postgres.split('  say "PostgreSQL and pgBackRest installed"',1)[0]
 ordinary=block('# 2. CrowdSec config','# 3. Packages')
 ordinary=ordinary[ordinary.index('\n'):]
 config=block('# 4. Configuration files.','[[ $(findmnt -n -o FSTYPE -T /run/aboutme)')
@@ -36,7 +33,7 @@ ordinary+='copy_script "$bundle/scripts/fence.sh"'+block(
 ordinary+=next(line for line in source.splitlines()
                if line.startswith('copy_tree "$bundle/edge/crowdsec"'))+'\n'
 ordinary+='\n'.join(line for line in source.splitlines() if line.endswith('systemctl daemon-reload'))+'\n'
-for name,body in [('ordinary',ordinary),('postgres',postgres)]:
+for name,body in [('ordinary',ordinary)]:
     body=helpers+body
     # Absolute destinations change; bundle source paths stay intact.
     body=body.replace(' /etc',' "$FIXTURE_CASE/etc"')
@@ -274,7 +271,8 @@ PY
   printf 'PASS snapshot-preserves-admission-metadata-contract\n'
 )
 
-for mode in ordinary postgres; do
+# shellcheck disable=SC2043
+for mode in ordinary; do
   export FIXTURE_CASE=$work/$mode FIXTURE_TICK=no FIXTURE_DRIFT=no
   export FIXTURE_LEASE_NOW=1577836801
   mkdir -p "$FIXTURE_CASE/etc/pgbackrest" "$FIXTURE_CASE/etc/postgresql/18/main" \
@@ -351,9 +349,7 @@ PY
       bash "$work/$mode.sh"
       [[ ! -s $FIXTURE_CASE/job ]] || fail 'service job outlived installer lock'
       [[ -s $FIXTURE_CASE/blocked ]] || fail 'watcher did not attempt admission during service job'
-      expected=reload
-      [[ $mode != postgres ]] || expected=restart
-      [[ $(grep -c "^$expected$" "$FIXTURE_CASE/reloads") == 1 ]] || fail 'changed configuration missed service operation'
+      [[ $(grep -c "^reload$" "$FIXTURE_CASE/reloads") == 1 ]] || fail 'changed configuration missed service operation'
       cmp "$FIXTURE_BUNDLE/host/etc/postgresql/18/main/$file" "$target"
       python3 - "$target" "$FIXTURE_UID" "$FIXTURE_GID" <<'PY'
 import os,stat,sys
@@ -361,11 +357,6 @@ entry=os.lstat(sys.argv[1])
 mode=0o644 if sys.argv[1].endswith('90-aboutme.conf') else 0o640
 assert (entry.st_uid,entry.st_gid,stat.S_IMODE(entry.st_mode))==(int(sys.argv[2]),int(sys.argv[3]),mode)
 PY
-      if [[ $mode == postgres ]]; then
-        if (crowdsec_lease_check); then fail 'restart retained an old lease'; fi
-        crowdsec_db_ready || fail 'restarted database did not settle'
-        fixture_lease "$crowdsec_db_epoch"
-      fi
       admit repaired || fail "$mode $file $fault repair failed lease admission"
     done
   done

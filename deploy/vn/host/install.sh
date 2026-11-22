@@ -17,9 +17,6 @@ die() {
 }
 say() { echo "install: $*"; }
 
-only=${ABOUTME_INSTALL_ONLY:-}
-case $only in "" | postgres) ;; *) die "invalid installation mode" ;; esac
-
 [ "$(id -u)" -eq 0 ] || die "run as root"
 [ $# -eq 1 ] || die "usage: install.sh <bundle-dir>"
 bundle=$(readlink -f "$1")
@@ -73,7 +70,7 @@ install -d -o root -g root -m 0755 "$lib" /run/aboutme
 for required in host/crowdsec-privacy-notice-host.sh host/workload-lock.sh \
   scripts/fence.sh scripts/deploy-safety.sh scripts/image-prune.sh scripts/deploy-host.sh \
   scripts/crowdsec-privacy-notice.sh; do
-  [[ -f $bundle/$required && ! -L $bundle/$required ]] || die "required notice helper is missing"
+  [[ -f $bundle/$required && ! -L $bundle/$required ]] || die "required host file is missing"
   install --compare -o root -g root -m 0755 "$bundle/$required" "$lib/${required##*/}"
 done
 "$lib/crowdsec-privacy-notice-host.sh" initialize || die "invalid_state"
@@ -330,22 +327,6 @@ echo "deb [signed-by=/etc/apt/keyrings/postgresql.asc] https://apt.postgresql.or
 echo "deb [signed-by=/etc/apt/keyrings/postgresql.asc] https://apt-archive.postgresql.org/pub/repos/apt noble-pgdg-archive main" \
   >>/etc/apt/sources.list.d/pgdg.list
 say "PGDG repository in place"
-
-if [ "$only" = postgres ]; then
-  apt-get update -qq
-  install_pinned --no-install-recommends "postgresql-common=$POSTGRESQL_COMMON_VERSION" "postgresql-client-common=$POSTGRESQL_COMMON_VERSION"
-  chown postgres:postgres /srv/data/postgresql
-  chmod 0700 /srv/data/postgresql
-  chown root:postgres /srv/data/pgbackrest-conf
-  chmod 0750 /srv/data/pgbackrest-conf
-  install_pinned --no-install-recommends "postgresql-18=$POSTGRESQL_VERSION" "postgresql-client-18=$POSTGRESQL_VERSION" \
-    "libpq5=$POSTGRESQL_VERSION" "pgbackrest=$PGBACKREST_VERSION"
-  install --compare -m 0644 "$bundle/host/etc/pgbackrest/pgbackrest.conf" /etc/pgbackrest/pgbackrest.conf
-  install_admission_transition install_postgresql_config \
-    "$bundle/host/etc/postgresql/18/main" restart
-  say "PostgreSQL and pgBackRest installed"
-  exit 0
-fi
 
 install_key "$bundle/host/keys/crowdsec.asc" "$CROWDSEC_SIGNER_FPR" "$tmp/crowdsec.asc"
 gpg --dearmor --yes -o /etc/apt/keyrings/crowdsec.gpg "$tmp/crowdsec.asc"

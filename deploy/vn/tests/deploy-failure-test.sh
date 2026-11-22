@@ -122,7 +122,8 @@ STUB
 
 cat >"$work/bin/sha256sum" <<'STUB'
 #!/usr/bin/env bash
-printf '%064d  %s\n' 0 "$1" | tr 0 c
+[[ $# -eq 0 ]] || printf '%s\n' "$1" >>"$DEPLOY_TEST_DIR/hashed-local.log"
+printf '%064d  %s\n' 0 "${1:-}" | tr 0 c
 STUB
 
 cat >"$work/bin/ssh" <<'STUB'
@@ -136,7 +137,9 @@ printf '%s\n' "$args" >>"$DEPLOY_TEST_DIR/ssh-calls.log"
   printf '%s\n' "$args" >>"$DEPLOY_TEST_DIR/keepalive-missing.log"
 case $args in
   *' -O exit '*) exit 0 ;;
-  *' sha256sum '*) printf '%064d  remote\n' 0 | tr 0 c; exit 0 ;;
+  *' sha256sum '*)
+    printf '%s\n' "${args##* sha256sum }" | tr -d " " >>"$DEPLOY_TEST_DIR/hashed-remote.log"
+    printf '%064d  remote\n' 0 | tr 0 c; exit 0 ;;
   *'SSH_CLIENT'*) printf '198.51.100.10'; exit 0 ;;
   *' ss -Htn '*)
     source "$ABOUTME_TEST_LIB/wait.sh"
@@ -899,6 +902,14 @@ unset OWNER_FILE
 ((owner_failures == 0)) || exit 1
 
 [[ -s $work/ssh-calls.log ]] || { echo "deploy.sh reached no SSH call" >&2; exit 1; }
+hash_failures=0
+while read -r required; do
+  [[ $required == scripts/* && $required != scripts/crowdsec-privacy-notice.sh ]] || continue
+  name=${required##*/}
+  grep -qxF "$repo_root/deploy/vn/scripts/$name" "$work/hashed-local.log" || { echo "deploy.sh did not hash $name locally" >&2; hash_failures=1; }
+  grep -qxF "/usr/local/lib/aboutme/$name" "$work/hashed-remote.log" || { echo "deploy.sh did not hash $name on the host" >&2; hash_failures=1; }
+done < <(sed -n '/^for required in /,/; do$/p' "$repo_root/deploy/vn/host/install.sh" | tr ' ;\\' '\n\n\n' | grep -E '^(host|scripts)/')
+((hash_failures == 0)) || exit 1
 if [[ -s $work/keepalive-missing.log ]]; then
   echo "SSH calls without ServerAliveInterval=15 and ServerAliveCountMax=4:" >&2
   sed -n '1,5p' "$work/keepalive-missing.log" >&2

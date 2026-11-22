@@ -198,7 +198,7 @@ for fault in missing symlink; do
   if bash "$work/required-helpers.sh" >"$work/out" 2>"$work/err"; then
     fail "installer accepted a $fault image-prune.sh"
   fi
-  grep -qF 'required notice helper is missing' "$work/err" || fail 'wrong helper refusal'
+  grep -qF 'required host file is missing' "$work/err" || fail 'wrong helper refusal'
   ! grep -qF 'deploy-host.sh' "$CALLS" || fail 'installer replaced deploy-host.sh before its helper'
 done
 rm "$FIXTURE_BUNDLE/scripts/image-prune.sh"
@@ -329,7 +329,7 @@ awk -v dir="$work/pg-calls" '
   copy { print > (dir "/" n); if ($0 !~ /\\$/) { copy = 0; close(dir "/" n) } }
 ' "$installer"
 mapfile -t pg_calls < <(grep -lF 'postgresql-common=' "$work/pg-calls"/*)
-((${#pg_calls[@]} == 2)) || fail 'postgresql-common install calls changed'
+((${#pg_calls[@]} == 1)) || fail 'postgresql-common install calls changed'
 cat >"$work/pg-fixture.sh" <<'SH'
 die() { printf 'install: %s\n' "$*" >&2; exit 1; }
 dpkg-query() {
@@ -416,9 +416,7 @@ done
 printf 'PASS postgresql-common-installs-and-holds-client-common-at-its-pin\n'
 
 pg_order=$(awk '
-  BEGIN { path = "preamble" }
-  /^if [[] "[$]only" = postgres []]; then$/ { path = "postgres-only"; next }
-  path == "postgres-only" && /^fi$/ { path = "full"; next }
+  BEGIN { path = "full" }
   /^[[:space:]]*install_pinned / {
     start = FNR; call = $0
     while (call ~ /\\$/ && (getline line) > 0) call = call " " line
@@ -428,7 +426,8 @@ pg_order=$(awk '
   /^[[:space:]]*chown postgres:postgres \/srv\/data\/postgresql$/ { print path, "chown", FNR }
 ' "$installer")
 pg_step() { awk -v p="$pg_path" -v s="$1" '$1 == p && $2 == s { print $3 }' <<<"$pg_order"; }
-for pg_path in postgres-only full; do
+# shellcheck disable=SC2043
+for pg_path in full; do
   pg_common=$(pg_step common) pg_chown=$(pg_step chown) pg_server=$(pg_step server)
   [[ $pg_common =~ ^[0-9]+$ && $pg_chown =~ ^[0-9]+$ && $pg_server =~ ^[0-9]+$ ]] ||
     fail "$pg_path path lost a PostgreSQL install step"
@@ -436,7 +435,7 @@ for pg_path in postgres-only full; do
   ((pg_chown < pg_server)) || fail "$pg_path path installs postgresql-18 before chowning the data directory"
 done
 pg_server_calls=$(grep -c '^[[:space:]]*install_pinned --no-install-recommends "postgresql-' "$installer" || true)
-[[ $pg_server_calls == 4 ]] || fail 'a PostgreSQL install_pinned call can pull in Recommends such as postgresql-18-jit'
+[[ $pg_server_calls == 2 ]] || fail 'a PostgreSQL install_pinned call can pull in Recommends such as postgresql-18-jit'
 grep -qF -- '"${apt_flags[@]}"' "$installer" || fail 'install_pinned dropped the no-Recommends flag'
 printf 'PASS postgresql-installs-skip-recommends\n'
 grep -qE '^echo "deb \[signed-by=/etc/apt/keyrings/postgresql\.asc\] https://apt-archive\.postgresql\.org/pub/repos/apt noble-pgdg-archive main"' "$installer" ||

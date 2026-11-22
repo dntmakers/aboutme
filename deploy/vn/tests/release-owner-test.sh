@@ -7,7 +7,6 @@ trap 'rm -rf "$work"' EXIT
 fail() { echo "release-owner-test: $*" >&2; exit 1; }
 host=$root/deploy/vn/scripts/deploy-host.sh
 wrapper=$root/deploy/vn/scripts/crowdsec-privacy-notice.sh
-primitive=$root/deploy/vn/host/crowdsec-privacy-notice-host.sh
 notice=$work/notice
 mkdir -p "$notice/units"
 
@@ -54,7 +53,6 @@ operation_record() {
 {
   grep -E '^readonly (publication_date|content_sha256)=' "$wrapper"
   sed -n '/^notice_manifest() {/,/^}/p; /^notice_release_number() {/,/^}/p; /^notice_release_read() {/,/^}/p' "$wrapper"
-  sed -n '/^notice_installed_admission() {/,/^}/p' "$primitive"
 } | sed -e "s|/var/lib/aboutme/release.json|$notice/release.json|g" \
   -e "s|/etc/containers/systemd/|$notice/units/|g" >"$work/notice-functions"
 grep -qF "$notice/release.json" "$work/notice-functions" || fail 'notice validators read another release path'
@@ -69,7 +67,6 @@ notice_fixture() {
   printf '[Container]\nImage=%s\n' "$(jq -r .web_image <<<"$1")" >"$notice/units/aboutme-web.container"
 }
 notice_record() { notice_fixture "$1" && (notice_release_read) >/dev/null 2>&1; }
-notice_admission() { notice_fixture "$1" && [[ $( (notice_installed_admission) 2>/dev/null) == v0.9.34 ]]; }
 
 python3 - "$root/deploy/vn/host/operation-state.sh" "$work/state.py" <<'PY'
 import pathlib, sys
@@ -116,7 +113,5 @@ for owners in "${refused[@]}"; do
     failures=1
   fi
 done
-for server in dannyota dntmakers; do check accepted notice_admission "$server dannyota dannyota dannyota"; done
-for server in evil Dntmakers DANNYOTA dannyota/aboutme; do check refused notice_admission "$server dannyota dannyota dannyota"; done
 ((failures == 0)) || fail 'a release record validator disagrees with the owner rules'
 echo 'release owner records passed'
