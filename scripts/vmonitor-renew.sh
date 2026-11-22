@@ -254,7 +254,7 @@ try:
         if remaining <= 0:
             sys.exit(2)
         print(expiry)
-        print('due' if remaining <= 259200 and window else 'skip')
+        print('due' if remaining <= 604800 and window else 'skip')
         print('healthy' if remaining > 172800 else 'unhealthy')
     elif mode == 'final':
         end, _ = row(sys.argv[2])
@@ -291,7 +291,7 @@ if [ "$action" = check ] || [ "$decision" = skip ]; then
 fi
 issue_write open || fail
 rc=0
-run_cli renew monitor renew-synthetic-quota --expected-end-time "$expiry" --max-days-left 3 --max-price 0 --output json || rc=$?
+run_cli renew monitor renew-synthetic-quota --expected-end-time "$expiry" --max-days-left 7 --max-price 0 --output json || rc=$?
 renew_diagnostic=$diagnostic
 case "$rc" in 0|1|2|3|4) ;; *) fail ;; esac
 classification=$(python3 -I "$tmp/validate.py" outcome "$tmp/cli-out" "$rc" 2> "$tmp/error") || { [ "$rc" -eq 0 ] && fail; fail "$rc"; }

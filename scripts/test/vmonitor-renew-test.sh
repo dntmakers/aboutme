@@ -196,7 +196,7 @@ reset_case
 run 0 renew
 assert_count 1 '^--read-only monitor get-synthetic-quota --output json$'
 assert_count 2 '^--read-only monitor quota-status --kind synthetic --output json$'
-assert_count 1 '^monitor renew-synthetic-quota --expected-end-time 2026-01-03T12:00:00+00:00 --max-days-left 3 --max-price 0 --output json$'
+assert_count 1 '^monitor renew-synthetic-quota --expected-end-time 2026-01-03T12:00:00+00:00 --max-days-left 7 --max-price 0 --output json$'
 [ "$(cat "$tmp/state/issue")" = closed ]
 ! grep -E 'GITHUB_TOKEN|GITHUB_STEP_SUMMARY|VNGCLOUD_PROFILE|VNGCLOUD_CONFIG_FILE|VNGCLOUD_ENDPOINT' "$tmp/state/cli-env"
 cp "$tmp/state/status-after" "$tmp/state/status"
@@ -336,11 +336,15 @@ set_end() {
   change status ".Items[0].EndTime = \"$1\""
 }
 reset_case
-set_end 2026-01-04T00:00:00Z
+set_end 2026-01-06T00:00:00Z
 run 0 renew
 assert_count 1 renew-synthetic-quota
 reset_case
-set_end 2026-01-04T00:00:00.000000001Z
+set_end 2026-01-08T00:00:00Z
+run 0 renew
+assert_count 1 renew-synthetic-quota
+reset_case
+set_end 2026-01-08T00:00:00.000000001Z
 run 0 renew
 assert_count 0 renew-synthetic-quota
 reset_case
