@@ -7,23 +7,23 @@ the workflow, trust boundary, and
 
 ## Pinned CLI and evidence
 
-Use `danny.vn/vngcloud/cmd/vngcloud@v0.99.0`. Install with `GOTOOLCHAIN=local`,
+Use `danny.vn/vngcloud/cmd/vngcloud@v1.0.1`. Install with `GOTOOLCHAIN=local`,
 `GOSUMDB=sum.golang.org`, and empty `GOPRIVATE`, `GONOSUMDB`, and `GOINSECURE`:
 
 ```sh
-go install danny.vn/vngcloud/cmd/vngcloud@v0.99.0
+go install danny.vn/vngcloud/cmd/vngcloud@v1.0.1
 ```
 
 Before executing that same absolute binary, assert its module identity using
 `go version -m <bin>`:
 
 ```text
-danny.vn/vngcloud v0.99.0 h1:ViCsFZzuhJo1vdibA8u56TNwGTUJ0Tm7BcIwuVmpuzs=
+danny.vn/vngcloud v1.0.1 h1:xVhS1muq5olJpNDt3Ny8/iTxxSuhZX1P01IcDl3Q34M=
 ```
 
 Supplied release evidence satisfies this pin's maintainer gate: verified signed
-annotated tag [v0.99.0][release] points to
-`e105293f321a07c27f347e859f05e51e24c81f3f`; successful [master CI][cli-ci]
+annotated tag [v1.0.1][release] points to
+`d784efc9241adcc4ed31bcab21e80dfd4552aab5`; successful [master CI][cli-ci]
 includes `go test -race ./...`. Real-transport tests with retries enabled live
 in `internal/cli/svc_monitor_ci_test.go`; the environment-only auth test lives
 in `internal/cli/service_account_auth_test.go`:
@@ -38,7 +38,7 @@ These supply evidence for request counts, retained attempt outcomes, preflight
 refusal, and environment-only auth; fake-CLI tests here cannot prove transport
 safety. Live smoke found a 0 VND quote and not-due at 30 days left, with no
 send. Live renewal and term arithmetic remain unverified. Sources and JSON
-goldens below pin v0.99.0; wiki section names locate guidance.
+goldens below pin v1.0.1; wiki section names locate guidance.
 
 - **Quota status snapshot:** [monitor/quotas_status.go][status-source] defines
   `AsOf`, `Items`, `Complete`, and row keys `Kind`, `ClassName`, `PackageName`,
@@ -170,31 +170,31 @@ Script validation, health, or issue API failures exit 1. Unknown CLI exits fail
 and retain an opened guard. Failed guard closure cannot turn nonzero CLI results
 into success. `check` never changes the hold or sends renewal.
 
-[release]: https://github.com/dannyota/vngcloud/releases/tag/v0.99.0
-[cli-ci]: https://github.com/dannyota/vngcloud/actions/runs/45062319320
+[release]: https://github.com/dannyota/vngcloud/releases/tag/v1.0.1
+[cli-ci]: https://github.com/dannyota/vngcloud/actions/runs/45168206768
 [wiki]:
-  https://github.com/dannyota/vngcloud/blob/v0.99.0/docs/wiki/Monitor-Synthetic-Quota.md#unattended-ci
+  https://github.com/dannyota/vngcloud/blob/v1.0.1/docs/wiki/Monitor-Synthetic-Quota.md#unattended-ci
 [wiki-status]:
-  https://github.com/dannyota/vngcloud/blob/v0.99.0/docs/wiki/Monitor-Quotas.md#quota-status-snapshot
+  https://github.com/dannyota/vngcloud/blob/v1.0.1/docs/wiki/Monitor-Quotas.md#quota-status-snapshot
 [wiki-reads]:
-  https://github.com/dannyota/vngcloud/blob/v0.99.0/docs/wiki/Monitor-Quotas.md#quota-reads
+  https://github.com/dannyota/vngcloud/blob/v1.0.1/docs/wiki/Monitor-Quotas.md#quota-reads
 [status-source]:
-  https://github.com/dannyota/vngcloud/blob/v0.99.0/monitor/quotas_status.go
+  https://github.com/dannyota/vngcloud/blob/v1.0.1/monitor/quotas_status.go
 [quota-source]:
-  https://github.com/dannyota/vngcloud/blob/v0.99.0/monitor/quota_read_types.go
+  https://github.com/dannyota/vngcloud/blob/v1.0.1/monitor/quota_read_types.go
 [renew-source]:
-  https://github.com/dannyota/vngcloud/blob/v0.99.0/monitor/quotas_renew.go
+  https://github.com/dannyota/vngcloud/blob/v1.0.1/monitor/quotas_renew.go
 [outcome-source]:
-  https://github.com/dannyota/vngcloud/blob/v0.99.0/monitor/quotas_outcome.go
+  https://github.com/dannyota/vngcloud/blob/v1.0.1/monitor/quotas_outcome.go
 [cli-main]:
-  https://github.com/dannyota/vngcloud/blob/v0.99.0/internal/cli/main.go
+  https://github.com/dannyota/vngcloud/blob/v1.0.1/internal/cli/main.go
 [cli-exits]:
-  https://github.com/dannyota/vngcloud/blob/v0.99.0/internal/cli/errors_exit.go
+  https://github.com/dannyota/vngcloud/blob/v1.0.1/internal/cli/errors_exit.go
 [wiki-renew]:
-  https://github.com/dannyota/vngcloud/blob/v0.99.0/docs/wiki/Monitor-Synthetic-Quota.md#synthetic-recovery-and-renewal
+  https://github.com/dannyota/vngcloud/blob/v1.0.1/docs/wiki/Monitor-Synthetic-Quota.md#synthetic-recovery-and-renewal
 [status-golden]:
-  https://github.com/dannyota/vngcloud/blob/v0.99.0/internal/cli/testdata/golden/monitor-quota-status.json.golden
+  https://github.com/dannyota/vngcloud/blob/v1.0.1/internal/cli/testdata/golden/monitor-quota-status.json.golden
 [get-golden]:
-  https://github.com/dannyota/vngcloud/blob/v0.99.0/internal/cli/testdata/golden/monitor-get-synthetic-quota.json.golden
+  https://github.com/dannyota/vngcloud/blob/v1.0.1/internal/cli/testdata/golden/monitor-get-synthetic-quota.json.golden
 [renew-golden]:
-  https://github.com/dannyota/vngcloud/blob/v0.99.0/internal/cli/testdata/golden/monitor-renew-synthetic-quota.json.golden
+  https://github.com/dannyota/vngcloud/blob/v1.0.1/internal/cli/testdata/golden/monitor-renew-synthetic-quota.json.golden
