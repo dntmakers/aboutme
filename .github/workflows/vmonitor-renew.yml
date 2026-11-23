@@ -46,9 +46,9 @@ jobs:
           export GOBIN="$work/bin" GOPATH="$work/gopath" GOMODCACHE="$work/mod" GOCACHE="$work/cache"
           export GOTOOLCHAIN=local GOSUMDB=sum.golang.org GOPRIVATE='' GONOSUMDB='' GOINSECURE=''
           mkdir -p "$GOBIN" "$GOPATH" "$GOMODCACHE" "$GOCACHE"
-          go install danny.vn/vngcloud/cmd/vngcloud@v0.99.0
+          go install danny.vn/vngcloud/cmd/vngcloud@v1.0.1
           identity=$(go version -m "$GOBIN/vngcloud" | awk '$1 == "mod" { print $2, $3, $4 }')
-          [ "$identity" = 'danny.vn/vngcloud v0.99.0 h1:ViCsFZzuhJo1vdibA8u56TNwGTUJ0Tm7BcIwuVmpuzs=' ]
+          [ "$identity" = 'danny.vn/vngcloud v1.0.1 h1:xVhS1muq5olJpNDt3Ny8/iTxxSuhZX1P01IcDl3Q34M=' ]
           printf '%s\n' "$GOBIN" >> "$GITHUB_PATH"
       - name: Process quota
         id: renew
