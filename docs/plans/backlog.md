@@ -17,6 +17,7 @@ Open items that outlived their shipped plans. One line each, with the evidence t
 ## Vietnam production
 
 - The lock wrapper's run-owned check gives `ps -axo …` 2 s; at load 14 on the Ubuntu host it stalled past that once and `make web-lint` exited 126 before lint ran. Raise the bound or retry once, and report the stall as a wrapper error rather than a check failure.
+- `scripts/test/totp-production-proof-test.sh` fails on the Mac at the `file-owner` tamper case ("runner accepted staged source tampering") on unchanged `main`; hosted Linux CI passes it. Make the owner stub portable or skip that case off Linux, so `make operational-test-fast` completes on the Mac.
 
 ## Acceptance evidence gaps
 

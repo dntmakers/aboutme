@@ -7,25 +7,26 @@ the workflow, trust boundary, and
 
 ## Pinned CLI and evidence
 
-Use `danny.vn/vngcloud/cmd/vngcloud@v0.89.0`. Install with `GOTOOLCHAIN=local`,
+Use `danny.vn/vngcloud/cmd/vngcloud@v0.99.0`. Install with `GOTOOLCHAIN=local`,
 `GOSUMDB=sum.golang.org`, and empty `GOPRIVATE`, `GONOSUMDB`, and `GOINSECURE`:
 
 ```sh
-go install danny.vn/vngcloud/cmd/vngcloud@v0.89.0
+go install danny.vn/vngcloud/cmd/vngcloud@v0.99.0
 ```
 
 Before executing that same absolute binary, assert its module identity using
 `go version -m <bin>`:
 
 ```text
-danny.vn/vngcloud v0.89.0 h1:o9YirnefFhEqpEJtalX41uHci6PR6P4AcotwPrWiqkA=
+danny.vn/vngcloud v0.99.0 h1:ViCsFZzuhJo1vdibA8u56TNwGTUJ0Tm7BcIwuVmpuzs=
 ```
 
 Supplied release evidence satisfies this pin's maintainer gate: verified signed
-annotated tag [v0.89.0][release] points to
-`2eddd4a00198f71c6ad3db6f631402b2f4d6603f`; successful [master CI][cli-ci]
+annotated tag [v0.99.0][release] points to
+`e105293f321a07c27f347e859f05e51e24c81f3f`; successful [master CI][cli-ci]
 includes `go test -race ./...`. Real-transport tests with retries enabled live
-in `internal/cli/svc_monitor_ci_test.go`:
+in `internal/cli/svc_monitor_ci_test.go`; the environment-only auth test lives
+in `internal/cli/service_account_auth_test.go`:
 
 - `TestSyntheticMutationCLIRealTransport`
 - `TestSyntheticMutationCLISendFailures`
@@ -37,49 +38,41 @@ These supply evidence for request counts, retained attempt outcomes, preflight
 refusal, and environment-only auth; fake-CLI tests here cannot prove transport
 safety. Live smoke found a 0 VND quote and not-due at 30 days left, with no
 send. Live renewal and term arithmetic remain unverified. Sources and JSON
-goldens below pin v0.89.0; wiki section names locate guidance.
+goldens below pin v0.99.0; wiki section names locate guidance.
 
-- **Quota status snapshot:** [monitor/quotas_status.go][status-source], lines
-  16–34, defines `AsOf`, `Items`, `Complete`, and row keys `Kind`, `ClassName`,
-  `PackageName`, `Status`, `Quota`, `Price`, `StartTime`, `EndTime`,
-  `TimeLeftSeconds`, `AutoRenew`, `RenewWindowOpen`, `NextSafeCommand`, `Error`.
-  Fields from `Quota` through `RenewWindowOpen` and `Error` are nullable.
-  `Error` has `Code`, `Operation`, and integer `Status`. `TimeLeftSeconds` is a
-  signed integer or null ([status golden][status-golden], lines 5–32: `-1`,
-  null). Source lines 169–180 truncate seconds at `AsOf` toward zero.
-- **Quota status snapshot:** that source, lines 40–74, 90–131, and 155–165,
-  gives `Kind: "Synthetic"`, `ClassName: "Basic"`, and empty `PackageName`.
-  Present rows preserve raw status; [monitor/quotas.go][quota-source], lines
-  24–28, defines `ACTIVE` and `IN-TRASH`. Absence gives `none`, null data, and
-  exit 0; component failure gives `unavailable`, `Complete: false`, and exit 1
-  (`QuotaStatusIncomplete`), even for 401/404. See [Quota status
-  snapshot][wiki-status] and [internal/cli/errors.go][cli-errors], lines 203–207
-  and 570–573. The window is known only for Basic, price 0, 10 API tests, one
-  location; true needs active, future expiry within seven days. It grants no
-  write permission. `NextSafeCommand` is a read hint.
+- **Quota status snapshot:** [monitor/quotas_status.go][status-source] defines
+  `AsOf`, `Items`, `Complete`, and row keys `Kind`, `ClassName`, `PackageName`,
+  `Status`, `Quota`, `Price`, `StartTime`, `EndTime`, `TimeLeftSeconds`,
+  `AutoRenew`, `RenewWindowOpen`, `NextSafeCommand`, and `Error`. Fields from
+  `Quota` through `RenewWindowOpen` and `Error` are nullable. `Error` has
+  `Code`, `Operation`, and integer `Status`. `TimeLeftSeconds` is a signed
+  integer or null, truncated toward zero ([status golden][status-golden]).
+  Synthetic rows use `Kind: "Synthetic"` and an empty `PackageName`; `ClassName`
+  comes from detail. Present rows preserve raw status. Absence gives `none`,
+  null data, and exit 0; component failure gives `unavailable`,
+  `Complete: false`, and exit 1 (`QuotaStatusIncomplete`), even for 401/404. The
+  window is known only for Basic, price 0, 10 API tests, one location; true
+  needs active, future expiry within seven days. It grants no write permission.
+  `NextSafeCommand` may suggest renewal or recovery with explicit guards from a
+  fresh read. See [Quota status snapshot][wiki-status].
 - **Quota reads:** JSON uses `.Quota.EndTime` and `.Quota.Status`, with status
-  `ACTIVE` in the [get golden][get-golden], lines 2–16. The output type is in
-  [monitor/quotas.go][quota-source], lines 128–131.
-  [internal/cli/svc_monitor.go][cli-render], lines 395–407 and 621–656, passes
-  SDK values to JSON rendering. `Class`, `PriceVND`, `StartUTC`, `EndUTC`, and
-  `TimeLeft` are table labels, never JSON aliases. See [Quota
+  `ACTIVE` in the [get golden][get-golden]. Types are in
+  [monitor/quota_read_types.go][quota-source]. `Class`, `PriceVND`, `StartUTC`,
+  `EndUTC`, and `TimeLeft` are table labels, never JSON aliases. See [Quota
   reads][wiki-reads].
-- **Unattended CI:** [monitor/quotas_renew.go][renew-source], lines 17–32,
-  defines renewal input and output; [monitor/quotas_outcome.go][outcome-source],
-  lines 13–72, defines `Sent`, `Stage`, and nullable `Error`; keys and
-  combinations are below. `PreviousEndTime` is an RFC 3339 timestamp or null;
-  `Quota` is an object or null; `OrderID` is a possibly empty string;
+- **Unattended CI:** [monitor/quotas_renew.go][renew-source] defines renewal
+  input and output; [monitor/quotas_outcome.go][outcome-source] defines `Sent`,
+  `Stage`, and nullable `Error`. `PreviousEndTime` is an RFC 3339 timestamp or
+  null; `Quota` is an object or null; `OrderID` is a possibly empty string;
   `PaymentPending` and `Renewed` are booleans; only confirmation sets `Renewed`
   true. `Error.Operation` is `monitor.RenewSyntheticQuota`, including pre-SDK
-  failures ([internal/cli/main.go][cli-main], lines 46–115). `Error.Status` is
-  an integer, with 0 when absent; `NotSettled` can retain 200, as the [renew
-  golden][renew-golden], lines 1–14, shows. The [Unattended CI][wiki] table,
-  lines 308–323, and [internal/cli/errors.go][cli-errors], lines 570–670, own
-  exit mappings. **Synthetic recovery and renewal**, lines 248–275, covers
-  flags, eligibility, quote, and send-once rules;
-  [internal/cli/main.go][cli-main], lines 117–154, enforces price consent and
-  refuses `--query`. **Unattended CI**, lines 279–284 and 333–354, covers
-  credentials and guard closure.
+  failures ([internal/cli/main.go][cli-main]). `Error.Status` is an integer,
+  with 0 when absent; `NotSettled` can retain 200 ([renew
+  golden][renew-golden]). The [Unattended CI][wiki] table and [exit
+  mappings][cli-exits] own exit mappings. [Synthetic recovery and
+  renewal][wiki-renew] covers flags, eligibility, quote, and send-once rules;
+  [internal/cli/main.go][cli-main] enforces price consent and refuses `--query`.
+  Unattended CI covers credentials and guard closure.
 
 ## Script and CLI contract
 
@@ -177,31 +170,31 @@ Script validation, health, or issue API failures exit 1. Unknown CLI exits fail
 and retain an opened guard. Failed guard closure cannot turn nonzero CLI results
 into success. `check` never changes the hold or sends renewal.
 
-[release]: https://github.com/dannyota/vngcloud/releases/tag/v0.89.0
-[cli-ci]: https://github.com/dannyota/vngcloud/actions/runs/41290218076
+[release]: https://github.com/dannyota/vngcloud/releases/tag/v0.99.0
+[cli-ci]: https://github.com/dannyota/vngcloud/actions/runs/45062319320
 [wiki]:
-  https://github.com/dannyota/vngcloud/blob/v0.89.0/docs/wiki/Monitor-Quotas.md#unattended-ci
+  https://github.com/dannyota/vngcloud/blob/v0.99.0/docs/wiki/Monitor-Synthetic-Quota.md#unattended-ci
 [wiki-status]:
-  https://github.com/dannyota/vngcloud/blob/v0.89.0/docs/wiki/Monitor-Quotas.md#quota-status-snapshot
+  https://github.com/dannyota/vngcloud/blob/v0.99.0/docs/wiki/Monitor-Quotas.md#quota-status-snapshot
 [wiki-reads]:
-  https://github.com/dannyota/vngcloud/blob/v0.89.0/docs/wiki/Monitor-Quotas.md#quota-reads
+  https://github.com/dannyota/vngcloud/blob/v0.99.0/docs/wiki/Monitor-Quotas.md#quota-reads
 [status-source]:
-  https://github.com/dannyota/vngcloud/blob/v0.89.0/monitor/quotas_status.go
+  https://github.com/dannyota/vngcloud/blob/v0.99.0/monitor/quotas_status.go
 [quota-source]:
-  https://github.com/dannyota/vngcloud/blob/v0.89.0/monitor/quotas.go
+  https://github.com/dannyota/vngcloud/blob/v0.99.0/monitor/quota_read_types.go
 [renew-source]:
-  https://github.com/dannyota/vngcloud/blob/v0.89.0/monitor/quotas_renew.go
+  https://github.com/dannyota/vngcloud/blob/v0.99.0/monitor/quotas_renew.go
 [outcome-source]:
-  https://github.com/dannyota/vngcloud/blob/v0.89.0/monitor/quotas_outcome.go
-[cli-render]:
-  https://github.com/dannyota/vngcloud/blob/v0.89.0/internal/cli/svc_monitor.go
+  https://github.com/dannyota/vngcloud/blob/v0.99.0/monitor/quotas_outcome.go
 [cli-main]:
-  https://github.com/dannyota/vngcloud/blob/v0.89.0/internal/cli/main.go
-[cli-errors]:
-  https://github.com/dannyota/vngcloud/blob/v0.89.0/internal/cli/errors.go
+  https://github.com/dannyota/vngcloud/blob/v0.99.0/internal/cli/main.go
+[cli-exits]:
+  https://github.com/dannyota/vngcloud/blob/v0.99.0/internal/cli/errors_exit.go
+[wiki-renew]:
+  https://github.com/dannyota/vngcloud/blob/v0.99.0/docs/wiki/Monitor-Synthetic-Quota.md#synthetic-recovery-and-renewal
 [status-golden]:
-  https://github.com/dannyota/vngcloud/blob/v0.89.0/internal/cli/testdata/golden/monitor-quota-status.json.golden
+  https://github.com/dannyota/vngcloud/blob/v0.99.0/internal/cli/testdata/golden/monitor-quota-status.json.golden
 [get-golden]:
-  https://github.com/dannyota/vngcloud/blob/v0.89.0/internal/cli/testdata/golden/monitor-get-synthetic-quota.json.golden
+  https://github.com/dannyota/vngcloud/blob/v0.99.0/internal/cli/testdata/golden/monitor-get-synthetic-quota.json.golden
 [renew-golden]:
-  https://github.com/dannyota/vngcloud/blob/v0.89.0/internal/cli/testdata/golden/monitor-renew-synthetic-quota.json.golden
+  https://github.com/dannyota/vngcloud/blob/v0.99.0/internal/cli/testdata/golden/monitor-renew-synthetic-quota.json.golden
