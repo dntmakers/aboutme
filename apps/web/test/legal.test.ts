@@ -43,7 +43,7 @@ describe('privacy and terms pages', () => {
       + 'này chỉ nằm trong trình duyệt suốt phiên của thẻ.',
     );
     expect(wrapper.get('[data-testid="legal-updated"]').text()).toBe(
-      'Cập nhật lần cuối ngày 21/11/2026',
+      'Cập nhật lần cuối ngày 23/11/2026',
     );
     expect(wrapper.text()).toContain(
       'Kết nối GitHub (không bắt buộc): nếu bạn kết nối GitHub để xác nhận '
@@ -183,7 +183,7 @@ describe('privacy and terms pages', () => {
       + 'same place. This stays in your browser for the tab session.',
     );
     expect(wrapper.get('[data-testid="legal-updated"]').text()).toBe(
-      'Last updated November 21, 2026',
+      'Last updated November 23, 2026',
     );
     expect(wrapper.text()).toContain(
       'GitHub connection (optional): if you connect GitHub to confirm work '

@@ -9,12 +9,12 @@ function sections(locale: 'en' | 'vi', page: 'privacy' | 'terms') {
 }
 
 describe('history legal copy', () => {
-  it('sets both update dates to the release date', () => {
-    expect(legalCopy.en.privacyUpdated).toBe('Last updated November 21, 2026');
+  it('dates each notice by its last change', () => {
+    expect(legalCopy.en.privacyUpdated).toBe('Last updated November 23, 2026');
     expect(legalCopy.en.termsUpdated).toBe('Last updated November 21, 2026');
-    const vi = 'Cập nhật lần cuối ngày 21/11/2026';
-    expect(legalCopy.vi.privacyUpdated).toBe(vi);
-    expect(legalCopy.vi.termsUpdated).toBe(vi);
+    const vi = 'Cập nhật lần cuối ngày';
+    expect(legalCopy.vi.privacyUpdated).toBe(`${vi} 23/11/2026`);
+    expect(legalCopy.vi.termsUpdated).toBe(`${vi} 21/11/2026`);
   });
 
   it('states the 30 day history in the privacy notice', () => {
