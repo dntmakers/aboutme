@@ -128,19 +128,21 @@ To confirm delivery safely, create a temporary check against a URL that returns
 its In-alarm notification to reach the owner, record the receipt time, then
 delete the temporary check. Do not interrupt production to test delivery.
 
-The Basic Synthetic Test quota is free and lasts at most one month. The server
-refuses auto-renew for free packages. Pro and Enterprise packages are disabled.
-The email notification quota was deleted. Telegram needs no notification quota;
-each send increments the synthetic usage counter's Telegram count.
+The Basic Synthetic Test quota is free. The server refuses provider auto-renew
+for free packages. Pro and Enterprise packages are disabled. Telegram needs no
+notification quota; each send increments the synthetic usage counter's Telegram
+count.
 
-| Quota                | Allowance | Expiry recorded 2026-11-01 (UTC) |
+| Quota                | Allowance | Expiry recorded 2026-11-24 (UTC) |
 | -------------------- | --------- | -------------------------------- |
-| Synthetic Test Basic | 10 checks | 2026-12-01T06:54:54Z             |
+| Synthetic Test Basic | 10 checks | 2026-12-31T06:54:54Z             |
 
-The [renewal workflow](../design/vmonitor-quota-renewal.md) supports dispatch;
-due-renewal proof and scheduling remain pending. Renew each month in the last
-seven days; the next window is 2026-11-24T06:54:54Z to 2026-12-01T06:54:54Z.
-Follow the design's existing hold procedure before any manual renewal:
+The [renewal workflow](../design/vmonitor-quota-renewal.md) runs twice daily and
+supports manual dispatch. The next seven-day renewal window opens at
+2026-12-24T06:54:54Z. The [2026-11-24 run][first-renewal] extended the previous
+expiry by 30 days at 0 VND without changing the start time.
+
+Follow the design's hold procedure before renewing outside the workflow:
 
 1. Open the vMonitor console, then **Quota & Usage**.
 2. Select **Synthetic test** and renew the free Basic quota. The pinned
@@ -149,9 +151,9 @@ Follow the design's existing hold procedure before any manual renewal:
 
 A lapsed synthetic quota stops checks. If it lapses, recover Basic from trash at
 0 VND, confirm it is active, and record the new expiry. Deleting the synthetic
-quota deletes all checks, so recreate them from a saved configuration. The
-current quota is active from 2026-11-01T06:54:54Z to 2026-12-01T06:54:54Z. The
-previous quota expired on 2026-10-25 and was recovered on 2026-11-01.
+quota deletes all checks, so recreate them from a saved configuration.
+
+[first-renewal]: https://github.com/dntmakers/aboutme/actions/runs/45344021804
 
 [`.github/workflows/uptime.yml`](../../.github/workflows/uptime.yml) is a slower
 backstop. It requests a five-minute schedule, tries `/readyz` three times, 20

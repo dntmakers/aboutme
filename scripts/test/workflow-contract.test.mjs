@@ -32,9 +32,11 @@ const readWorkflow = (name) =>
 
 const repositoryId = "1318874703";
 const repositoryGuard = `github.repository_id == ${repositoryId} && github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch'`;
+const renewalGuard = `github.repository_id == ${repositoryId} && github.ref == 'refs/heads/main' && (github.event_name == 'workflow_dispatch' || github.event_name == 'schedule')`;
 
 function guardAdmits(condition, github) {
-  assert.match(condition, /^[\w.' =&/-]+$/, "guard uses only comparisons");
+  assert.ok([repositoryGuard, renewalGuard].includes(condition));
+  assert.match(condition, /^[\w.' =&/()|-]+$/, "guard uses only comparisons");
   return Function("github", `return ${condition}`)(github);
 }
 
@@ -63,16 +65,19 @@ test("approval probe has only fixed echoes and a main-only environment gate", ()
 
 test("run guards admit the repository under both names and nothing else", () => {
   const guards = [
-    ...Object.values(readWorkflow("approval-probe").jobs).map((job) => job.if),
-    readWorkflow("vmonitor-renew").jobs.renew.if,
+    ...Object.values(readWorkflow("approval-probe").jobs).map((job) => [job.if, repositoryGuard, false]),
+    [readWorkflow("vmonitor-renew").jobs.renew.if, renewalGuard, true],
   ];
   const dispatch = { ref: "refs/heads/main", event_name: "workflow_dispatch" };
-  for (const condition of guards) {
-    assert.equal(condition, repositoryGuard);
+  for (const [condition, expected, scheduled] of guards) {
+    assert.equal(condition, expected);
     for (const repository of ["dannyota/aboutme", "dntmakers/aboutme"]) {
       assert.equal(guardAdmits(condition, { ...dispatch, repository, repository_id: repositoryId }), true, repository);
+      assert.equal(guardAdmits(condition, { ...dispatch, repository, repository_id: repositoryId, event_name: "schedule" }), scheduled, repository);
     }
     for (const github of [
+      { ...dispatch, repository: "fork/aboutme", repository_id: "999", event_name: "schedule" },
+      { ...dispatch, repository: "dannyota/aboutme", repository_id: repositoryId, ref: "refs/heads/topic", event_name: "schedule" },
       { ...dispatch, repository: "dannyota/aboutme", repository_id: "1" },
       { ...dispatch, repository: "fork/aboutme", repository_id: "999" },
       { ...dispatch, repository: "dntmakers/aboutme", repository_id: `${repositoryId}0` },
@@ -2212,12 +2217,12 @@ function checkRenewalWorkflow(workflow) {
     on: { workflow_dispatch: { inputs: { action: {
       description: "Check or renew the Synthetic quota", type: "choice", required: true,
       default: "renew", options: ["renew", "check"],
-    } } } },
+    } } }, schedule: [{ cron: "37 5,17 * * *" }] },
     permissions: {},
     concurrency: { group: "vmonitor-renew", "cancel-in-progress": false },
     jobs: { renew: {
       name: "Renew Synthetic quota",
-      if: repositoryGuard,
+      if: renewalGuard,
       "runs-on": "ubuntu-24.04", "timeout-minutes": 10,
       environment: "vmonitor-renew", permissions: { issues: "write" },
       steps: [
@@ -2228,7 +2233,7 @@ function checkRenewalWorkflow(workflow) {
           with: { "go-version": pins.golang, cache: false } },
         { name: "Install verified CLI", run: renewalInstall },
         { name: "Process quota", id: "renew", env: {
-          ACTION: "${{ inputs.action }}", VNGCLOUD_CLIENT_ID: "${{ secrets.VNGCLOUD_CLIENT_ID }}",
+          ACTION: "${{ github.event_name == 'schedule' && 'renew' || inputs.action }}", VNGCLOUD_CLIENT_ID: "${{ secrets.VNGCLOUD_CLIENT_ID }}",
           VNGCLOUD_CLIENT_SECRET: "${{ secrets.VNGCLOUD_CLIENT_SECRET }}",
           VNGCLOUD_REGION: "${{ vars.VNGCLOUD_REGION }}", VNGCLOUD_PROJECT_ID: "${{ secrets.VNGCLOUD_PROJECT_ID }}",
           GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}",
@@ -2241,7 +2246,13 @@ function checkRenewalWorkflow(workflow) {
 test("renewal workflow keeps its trusted dispatch and credential boundary", () => {
   checkRenewalWorkflow(readWorkflow("vmonitor-renew"));
   const mutations = [
-    (w) => { w.on.schedule = [{ cron: "37 5,17 * * *" }]; },
+    (w) => { delete w.on.schedule; },
+    (w) => { w.on.schedule[0].cron = "0 5,17 * * *"; },
+    (w) => { w.on.schedule.push({ cron: "37 5,17 * * *" }); },
+    (w) => { w.on.push = null; },
+    (w) => { w.jobs.renew.steps[4].env.ACTION = "${{ inputs.action }}"; },
+    (w) => { w.jobs.renew.steps[4].env.ACTION = "renew"; },
+    (w) => { w.jobs.renew.if = repositoryGuard; },
     (w) => { w.on.workflow_dispatch.inputs.action.options.push("other"); },
     (w) => { w.jobs.renew.if = "always()"; },
     (w) => { w.jobs.renew.if = w.jobs.renew.if.replace(`github.repository_id == ${repositoryId}`, "github.repository == 'dannyota/aboutme'"); },

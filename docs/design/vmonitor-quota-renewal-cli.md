@@ -36,9 +36,9 @@ in `internal/cli/service_account_auth_test.go`:
 
 These supply evidence for request counts, retained attempt outcomes, preflight
 refusal, and environment-only auth; fake-CLI tests here cannot prove transport
-safety. Live smoke found a 0 VND quote and not-due at 30 days left, with no
-send. Live renewal and term arithmetic remain unverified. Sources and JSON
-goldens below pin v1.0.1; wiki section names locate guidance.
+safety. The [production runbook](../runbooks/production.md#alarms) records live
+renewal results. Sources and JSON goldens below pin v1.0.1; wiki section names
+locate guidance.
 
 - **Quota status snapshot:** [monitor/quotas_status.go][status-source] defines
   `AsOf`, `Items`, `Complete`, and row keys `Kind`, `ClassName`, `PackageName`,

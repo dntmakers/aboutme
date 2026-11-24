@@ -9,6 +9,8 @@ on:
         required: true
         default: renew
         options: [renew, check]
+  schedule:
+    - cron: '37 5,17 * * *'
 
 permissions: {}
 concurrency:
@@ -18,7 +20,7 @@ concurrency:
 jobs:
   renew:
     name: Renew Synthetic quota
-    if: github.repository_id == 1318874703 && github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch'
+    if: github.repository_id == 1318874703 && github.ref == 'refs/heads/main' && (github.event_name == 'workflow_dispatch' || github.event_name == 'schedule')
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     environment: vmonitor-renew
@@ -53,7 +55,7 @@ jobs:
       - name: Process quota
         id: renew
         env:
-          ACTION: ${{ inputs.action }}
+          ACTION: ${{ github.event_name == 'schedule' && 'renew' || inputs.action }}
           VNGCLOUD_CLIENT_ID: ${{ secrets.VNGCLOUD_CLIENT_ID }}
           VNGCLOUD_CLIENT_SECRET: ${{ secrets.VNGCLOUD_CLIENT_SECRET }}
           VNGCLOUD_REGION: ${{ vars.VNGCLOUD_REGION }}

@@ -309,8 +309,8 @@ two public locations and alerts the owner on Telegram. The GitHub
 notification delivery, and monthly quota renewal.
 
 The [quota renewal design](vmonitor-quota-renewal.md) owns renewal security and
-failure boundaries. Dispatch is live; due-renewal proof and scheduling remain
-pending. Its renew-only account is GitHub's approved cloud-credential exception.
+failure boundaries. Its renew-only account is GitHub's approved cloud-credential
+exception.
 
 | Signal   | Mechanism                                                        |
 | -------- | ---------------------------------------------------------------- |

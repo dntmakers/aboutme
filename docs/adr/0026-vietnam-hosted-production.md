@@ -206,9 +206,6 @@ amendment below or its credential exception.
 
 Status: Accepted (2026-11-01), under the owner's standing approval for reviewed
 solutions and request to renew the free Synthetic quota through GitHub Actions.
-The dispatch workflow is live: `check` passed on 2026-11-01 and hold issue
-[#146](https://github.com/dannyota/aboutme/issues/146) is closed. First due
-`renew` verification remains pending after 2026-11-28.
 
 The renew-only GreenNode service account `aboutme-vmonitor-renew` is the one
 approved cloud-credential exception in CI. Its client ID, client secret, and
@@ -252,8 +249,9 @@ depending on laptop uptime. The cost is a narrowly scoped static cloud key in
 GitHub and trusted issue writers. A missed schedule can still let the quota
 lapse. Rollback disables automation and returns to coordinated manual renewal
 after settling any retained hold. No app contract or stored-data migration is
-required. Provider renewal rules and first-party evidence are cited in the
-renewal design; live term arithmetic remains unverified.
+required. The renewal design cites provider rules. The
+[production runbook](../runbooks/production.md#alarms) records live renewal
+results.
 
 ### Amendment history
 
