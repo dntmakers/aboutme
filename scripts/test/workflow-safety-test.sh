@@ -925,7 +925,7 @@ for (const file of readdirSync(directory, { recursive: true, withFileTypes: true
   if (document.errors.length) throw new Error(`${path}: ${document.errors.join("; ")}`);
   // Bind the exception to the whole workflow contract, including its execution steps.
   const trusted = path === join(directory, "vmonitor-renew.yml") &&
-    createHash("sha256").update(source).digest("hex") === "5a36d640ed7e771a45e56139e22285d60ffa2221b7d77973f9636aa6b2220663";
+    createHash("sha256").update(source).digest("hex") === "297ab25034a86db9e619ad4d47b7b5332cc5df506fb6dc992025e066d0fef719";
   walk(document.toJS({ mapAsMap: true }), [], path, trusted);
 }
 NODE

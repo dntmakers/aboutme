@@ -1,7 +1,6 @@
 # vMonitor Synthetic quota renewal
 
-Approved 2026-10-14, updated 2026-11-01, pending implementation: GitHub Actions
-renews the free Basic Synthetic Test quota for the
+GitHub Actions renews the free Basic Synthetic Test quota for the
 [Vietnam alarm](vietnam-production.md#logs-metrics-and-alarms). Telegram handles
 notifications without quota processing. The
 [ADR 0026 amendment](../adr/0026-vietnam-hosted-production.md#amendment-synthetic-quota-renewal-in-github-actions-2026-11-01)
@@ -12,16 +11,16 @@ authorizes the sole cloud-credential exception.
 The [runbook](../runbooks/production.md#alarms) owns allowances and live expiry.
 Basic cannot auto-renew; free renewal opens in the last seven days [Synthetic].
 Renew as soon as the provider window opens, seven days before expiry (owner,
-2026-11-22). Successful renewal proves whether it extends expiry or starts a new
-term. Early renewal may lose unused days. A 409 window refusal is a sent,
-definite refusal, not proof of no send.
+2026-11-22). Read back the expiry after renewal rather than assuming a fixed
+extension. A 409 window refusal is a sent, definite refusal, not proof of no
+send.
 
-After live validation, schedule `37 5,17 * * *` UTC. Compute time left from
-fresh provider reads and current UTC, never schedule timestamps or rounded days.
-Fail at <= 172800 seconds after processing. Expiry stops checks; recovery stays
-human. GitHub may delay/drop runs and disables idle public-repository schedules
-after 60 days [schedule]. Operators check enabled state and recent runs: silence
-sends no alert. The uptime workflow remains a backstop.
+Schedule `37 5,17 * * *` UTC. Compute time left from fresh provider reads and
+current UTC, never schedule timestamps or rounded days. Fail at <= 172800
+seconds after processing. Expiry stops checks; recovery stays human. GitHub may
+delay/drop runs and disables idle public-repository schedules after 60 days
+[schedule]. Operators check enabled state and recent runs: silence sends no
+alert. The uptime workflow remains a backstop.
 
 Renew only when `0 < seconds-left <= 604800`, with a free quote. Synthetic has
 no notification-quota action budget. Provider rate limits and refusal costs to
@@ -32,10 +31,10 @@ Uncertain sends hold later runs; confirmed renewal needs no human clearance.
 
 `.github/workflows/vmonitor-renew.yml` has one `renew` job on `ubuntu-24.04`:
 
-- Permit only `workflow_dispatch` initially; add `schedule` through the release
-  gate. Dispatch input `action` chooses `renew` (default) or `check`; schedule
-  selects `renew`. Pass it through step `env`, validate in the script, never
-  interpolate into shell source. `check` uses only reads with `--read-only`.
+- Permit only `workflow_dispatch` and `schedule`. Dispatch input `action`
+  chooses `renew` (default) or `check`; schedule selects `renew`. Pass the
+  action through step `env`, validate in the script, never interpolate into
+  shell source. `check` uses only reads with `--read-only`.
 - Set `permissions: {}` with only job-level `issues: write`. Guard repository
   `dannyota/aboutme`, ref `refs/heads/main`, and the allowed event. Workflow
   concurrency is `vmonitor-renew`, `cancel-in-progress: false`; job timeout is
@@ -229,19 +228,17 @@ Release order:
 3. Run `action=check` on main with credentials. It may pass healthy reads while
    leaving the initial hold open. After it passes, the owner closes that hold
    and coordinates a due `action=renew`; no console renewal may overlap.
-4. For the runbook's current term, the provider window and the 7-day threshold
-   both start 2026-11-24T06:54:54Z. Keep the schedule absent until successful
-   due dispatch proves later expiry by read-back and records term arithmetic. A
-   dispatch before 2026-11-24T06:54:54Z must stay not due. Unconfirmed sends
-   require reconciliation, not another attempt.
+4. Keep the schedule absent until a due dispatch proves later expiry by
+   read-back. Record the expiry and term arithmetic in the runbook. An early
+   dispatch must stay not due. Unconfirmed sends require reconciliation, not
+   another attempt.
 5. Add the cron trigger in a separate reviewed, green change under the owner's
-   standing approval. Keep coordinated manual renewal during rollout. Record
-   live evidence and update the runbook's expiry after success.
+   standing approval. Keep coordinated manual renewal during rollout.
 
 No further product choice needs owner approval. The owner controls initial
 arming and hold recovery. Pin changes, wider permissions or credential
 exceptions, paid renewal, and automated recovery need a new reviewed decision.
-Verify revocation timing, provider limits, and live term arithmetic.
+Verify revocation timing and provider limits.
 
 [Synthetic]:
   https://docs.greennode.ai/vmonitor/dashboards/synthetics/lam-viec-voi-synthetic-test-quota

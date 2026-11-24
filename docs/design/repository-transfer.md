@@ -199,10 +199,10 @@ Unchanged:
 
 ## Timing
 
-The vMonitor renewal window runs from 2026-11-24T06:54:54Z to
-2026-12-01T06:54:54Z ([production runbook](../runbooks/production.md#alarms)).
-The ID guard makes `vmonitor-renew.yml` run under either name. Before
-dispatching it after a transfer, check that its environment kept its secrets.
+Check the next vMonitor renewal window in the
+[production runbook](../runbooks/production.md#alarms). The ID guard makes
+`vmonitor-renew.yml` run under either name. After a transfer, verify that the
+workflow's environment kept its secrets before any renewal.
 
 ## Owner-only steps
 
